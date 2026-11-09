@@ -1,4 +1,4 @@
-import { MasterAudioSettings } from '../types/editor';
+import { MasterAudioSettings, TimelineClip, TimelineTrack, MediaAsset } from '../types/editor';
 
 /**
  * Advanced Web Audio Studio Engine
@@ -167,6 +167,68 @@ class AudioStudioEngine {
       // Element might already be connected or CORS restricted
       const gain = ctx.createGain();
       return gain;
+    }
+  }
+
+  /** Schedule imported audio clips against the editor timeline during preview playback. */
+  public syncTimelinePlayback(
+    clips: TimelineClip[],
+    tracks: TimelineTrack[],
+    assets: MediaAsset[],
+    timelineTime: number,
+    isPlaying: boolean
+  ): void {
+    const trackById = new Map(tracks.map((track) => [track.id, track]));
+    const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+    const activeClipIds = new Set<string>();
+
+    for (const clip of clips) {
+      if (clip.type !== 'audio') continue;
+      const track = trackById.get(clip.trackId);
+      const asset = assetById.get(clip.assetId);
+      if (!track || !asset || asset.type !== 'audio') continue;
+
+      let entry = this.audioElements.get(clip.id);
+      if (!entry) {
+        const element = new Audio();
+        element.preload = 'auto';
+        element.src = asset.url;
+        element.crossOrigin = 'anonymous';
+        const gain = this.registerMediaElement(clip.id, element);
+        entry = this.audioElements.get(clip.id);
+        if (!entry) continue;
+      }
+
+      const { element, gain } = entry;
+      const isActive = isPlaying && !track.muted &&
+        timelineTime >= clip.start && timelineTime < clip.start + clip.duration;
+
+      if (!isActive) {
+        element.pause();
+        continue;
+      }
+
+      activeClipIds.add(clip.id);
+      const expectedTime = Math.max(0, (timelineTime - clip.start) * clip.speed + clip.offset);
+      element.playbackRate = Math.max(0.25, Math.min(4, clip.speed || 1));
+      gain.gain.setTargetAtTime(
+        Math.max(0, clip.volume) * Math.max(0, track.volume),
+        this.ctx?.currentTime ?? 0,
+        0.03
+      );
+
+      if (element.paused || Math.abs(element.currentTime - expectedTime) > 0.4) {
+        if (Math.abs(element.currentTime - expectedTime) > 0.4) {
+          try { element.currentTime = expectedTime; } catch { /* wait for metadata */ }
+        }
+        void element.play().catch(() => {
+          // Playback may be blocked until the next user gesture.
+        });
+      }
+    }
+
+    for (const [clipId, entry] of this.audioElements) {
+      if (!activeClipIds.has(clipId)) entry.element.pause();
     }
   }
 
