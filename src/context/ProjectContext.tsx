@@ -357,14 +357,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setMediaAssets((prev) => [...prev, asset]);
   }, []);
 
-  // Import local user video/audio/image files
+  // Import local user video/audio/image files and register visual media under
+  // the exact asset ID used by timeline clips.
   const importUserFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     for (const file of fileArray) {
       const url = URL.createObjectURL(file);
-      const isVideo = file.type.startsWith('video');
-      const isAudio = file.type.startsWith('audio');
-      const isImage = file.type.startsWith('image');
+      const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/');
+      const isImage = file.type.startsWith('image/');
+      const assetId = `asset-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
       let duration = 5;
       let width = 1920;
@@ -372,30 +374,47 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let thumbnailUrl = '';
 
       if (isVideo) {
-        const video = document.createElement('video');
-        video.src = url;
-        await new Promise((res) => {
-          video.onloadedmetadata = () => {
-            duration = video.duration || 5;
-            width = video.videoWidth || 1920;
-            height = video.videoHeight || 1080;
-            res(true);
+        const metadataVideo = document.createElement('video');
+        metadataVideo.preload = 'metadata';
+        metadataVideo.muted = true;
+        metadataVideo.src = url;
+        await new Promise<void>((resolve) => {
+          metadataVideo.onloadedmetadata = () => {
+            duration = Number.isFinite(metadataVideo.duration) ? metadataVideo.duration : 5;
+            width = metadataVideo.videoWidth || 1920;
+            height = metadataVideo.videoHeight || 1080;
+            resolve();
           };
+          metadataVideo.onerror = () => resolve();
         });
-        renderEngine.getOrCreateMediaElement(`asset-user-${Date.now()}`, url, 'video');
+        renderEngine.getOrCreateMediaElement(assetId, url, 'video');
       } else if (isAudio) {
-        const audio = document.createElement('audio');
-        audio.src = url;
-        await new Promise((res) => {
-          audio.onloadedmetadata = () => {
-            duration = audio.duration || 10;
-            res(true);
+        const metadataAudio = document.createElement('audio');
+        metadataAudio.preload = 'metadata';
+        metadataAudio.src = url;
+        await new Promise<void>((resolve) => {
+          metadataAudio.onloadedmetadata = () => {
+            duration = Number.isFinite(metadataAudio.duration) ? metadataAudio.duration : 10;
+            resolve();
           };
+          metadataAudio.onerror = () => resolve();
         });
+      } else if (isImage) {
+        const image = new Image();
+        image.src = url;
+        await new Promise<void>((resolve) => {
+          image.onload = () => {
+            width = image.naturalWidth || 1920;
+            height = image.naturalHeight || 1080;
+            resolve();
+          };
+          image.onerror = () => resolve();
+        });
+        renderEngine.getOrCreateMediaElement(assetId, url, 'image');
       }
 
       const newAsset: MediaAsset = {
-        id: `asset-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: assetId,
         name: file.name,
         type: isVideo ? 'video' : isAudio ? 'audio' : 'image',
         url,
