@@ -70,6 +70,60 @@ export class VideoRenderEngine {
     return null;
   }
 
+  /** Keep source video elements moving with the timeline during preview playback. */
+  public syncVideoPlayback(
+    isPlaying: boolean,
+    time: number,
+    tracks: TimelineTrack[],
+    clips: TimelineClip[]
+  ): void {
+    const visibleTrackIds = new Set(
+      tracks.filter((track) => track.type === 'video' && !track.muted).map((track) => track.id)
+    );
+    const activeVideoIds = new Set<string>();
+
+    for (const clip of clips) {
+      if (clip.type !== 'video' || !visibleTrackIds.has(clip.trackId)) continue;
+      const media = this.mediaElements.get(clip.assetId);
+      if (!(media instanceof HTMLVideoElement)) continue;
+
+      const active = time >= clip.start && time < clip.start + clip.duration;
+      if (!active) {
+        media.pause();
+        continue;
+      }
+
+      activeVideoIds.add(clip.assetId);
+      const expectedTime = Math.max(0, (time - clip.start) * clip.speed + clip.offset);
+      media.playbackRate = Math.max(0.25, Math.min(4, clip.speed || 1));
+
+      if (!isPlaying) {
+        media.pause();
+        if (Math.abs(media.currentTime - expectedTime) > 0.04) {
+          try { media.currentTime = expectedTime; } catch { /* metadata may not be ready yet */ }
+        }
+      } else {
+        // Correct drift at clip start or after seeking, but do not constantly seek
+        // while the source video is already playing.
+        if (media.paused || Math.abs(media.currentTime - expectedTime) > 0.45) {
+          if (Math.abs(media.currentTime - expectedTime) > 0.45) {
+            try { media.currentTime = expectedTime; } catch { /* wait for metadata */ }
+          }
+          void media.play().catch(() => {
+            // Browser autoplay policy can reject playback until the user interacts.
+          });
+        }
+      }
+    }
+
+    // Pause source videos that are no longer part of the active timeline.
+    for (const [assetId, media] of this.mediaElements) {
+      if (media instanceof HTMLVideoElement && !activeVideoIds.has(assetId)) {
+        media.pause();
+      }
+    }
+  }
+
   /**
    * Render single frame at exact timeline timecode
    */
