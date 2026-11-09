@@ -59,6 +59,12 @@ export const PreviewMonitor: React.FC = () => {
         ? ['loadeddata', 'canplay']
         : ['load'];
       eventNames.forEach((eventName) => media.addEventListener(eventName, refresh));
+      if (
+        (media instanceof HTMLVideoElement && media.readyState >= 2) ||
+        (media instanceof HTMLImageElement && media.complete && media.naturalWidth > 0)
+      ) {
+        refresh();
+      }
       cleanups.push(() => {
         eventNames.forEach((eventName) => media.removeEventListener(eventName, refresh));
       });
