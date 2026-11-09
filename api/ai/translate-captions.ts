@@ -1,2 +1,2 @@
-// Vercel function entry for caption translation.
-export { default } from '../../server.ts';
+import { translateCaptions } from './_handler.ts';
+export default translateCaptions;
