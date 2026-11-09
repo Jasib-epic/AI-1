@@ -240,7 +240,16 @@ export class VideoRenderEngine {
           ctx.drawImage(media, -width / 2, -height / 2, width, height);
         }
       } else if (media instanceof HTMLImageElement) {
-        ctx.drawImage(media, -width / 2, -height / 2, width, height);
+        if (media.complete && media.naturalWidth > 0) {
+          ctx.drawImage(media, -width / 2, -height / 2, width, height);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(-width / 2, -height / 2, width, height);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '20px "Plus Jakarta Sans", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Loading image…', 0, 0);
+        }
       }
     } else {
       // Fallback placeholder if media not yet loaded
