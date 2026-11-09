@@ -301,6 +301,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => cancelAnimationFrame(animId);
   }, [isPlaying, project.duration]);
 
+  // Keep audio clips synchronized with the timeline playhead and track controls.
+  useEffect(() => {
+    audioEngine.syncTimelinePlayback(
+      project.clips,
+      project.tracks,
+      mediaAssets,
+      currentTime,
+      isPlaying
+    );
+  }, [project.clips, project.tracks, mediaAssets, currentTime, isPlaying]);
+
   // Keyboard Shortcuts (Space: Play/Pause, J: Step Back, L: Step Fwd, C: Razor, V: Select, Ctrl+Z: Undo)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
