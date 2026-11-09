@@ -189,24 +189,25 @@ class AudioStudioEngine {
       if (!track || !asset || asset.type !== 'audio') continue;
 
       let entry = this.audioElements.get(clip.id);
+      const isActive = isPlaying && !track.muted &&
+        timelineTime >= clip.start && timelineTime < clip.start + clip.duration;
+
+      if (!isActive) {
+        entry?.element.pause();
+        continue;
+      }
+
       if (!entry) {
         const element = new Audio();
         element.preload = 'auto';
-        element.src = asset.url;
         element.crossOrigin = 'anonymous';
-        const gain = this.registerMediaElement(clip.id, element);
+        element.src = asset.url;
+        this.registerMediaElement(clip.id, element);
         entry = this.audioElements.get(clip.id);
         if (!entry) continue;
       }
 
       const { element, gain } = entry;
-      const isActive = isPlaying && !track.muted &&
-        timelineTime >= clip.start && timelineTime < clip.start + clip.duration;
-
-      if (!isActive) {
-        element.pause();
-        continue;
-      }
 
       activeClipIds.add(clip.id);
       const expectedTime = Math.max(0, (timelineTime - clip.start) * clip.speed + clip.offset);
