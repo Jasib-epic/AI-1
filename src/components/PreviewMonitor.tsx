@@ -43,7 +43,7 @@ export const PreviewMonitor: React.FC = () => {
   const scopeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isLooping, setIsLooping] = useState(true);
-  const [, setMediaRevision] = useState(0);
+  const [mediaRevision, setMediaRevision] = useState(0);
 
   // Ensure every imported image/video is available to the canvas renderer.
   // Redraw once the browser has decoded the first frame.
@@ -110,7 +110,7 @@ export const PreviewMonitor: React.FC = () => {
   }, [
     currentTime,
     mediaAssets,
-    setMediaRevision,
+    mediaRevision,
     project.tracks,
     project.clips,
     project.subtitles,
