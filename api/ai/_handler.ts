@@ -31,7 +31,7 @@ export async function editAssistant(req: any, res: any) {
     });
     const parsed = JSON.parse((response.text || '{}').trim());
     return send(res, 200, { success: true, summary: parsed.summary || 'Edits prepared.', actions: Array.isArray(parsed.actions) ? parsed.actions : [], isFallback: false });
-  } catch (e: any) { return send(res, 500, { error: e?.message || 'AI editing request failed' }); }
+  } catch (e: any) { console.error('Gemini edit request failed; using safe fallback:', e?.message); return fallback(res, { summary: 'Gemini is temporarily busy. Your instruction was received, but no automatic edits were generated. Please retry shortly.', actions: [] }); }
 }
 
 export async function transcribeCaptions(req: any, res: any) {
@@ -47,7 +47,7 @@ export async function transcribeCaptions(req: any, res: any) {
     const out = await ai.models.generateContent({ model, contents: prompt, config: { responseMimeType: 'application/json' } });
     const parsed = JSON.parse((out.text || '[]').trim());
     return send(res, 200, { success: true, subtitles: Array.isArray(parsed) ? parsed : parsed.subtitles || [], isFallback: false });
-  } catch (e: any) { return send(res, 500, { error: e?.message || 'Caption generation failed' }); }
+  } catch (e: any) { console.error('Gemini caption request failed; using fallback captions:', e?.message); const d = Math.max(3, Number(duration) || 15); return fallback(res, { subtitles: [{ id: 'sub-1', start: 0.5, end: Math.min(3.5, d), text: 'A new story begins here.' }, { id: 'sub-2', start: Math.min(4, d * 0.4), end: Math.min(7.8, d * 0.7), text: 'Every frame shapes the moment.' }, { id: 'sub-3', start: Math.min(8.2, d * 0.75), end: Math.max(8.5, d - 0.5), text: 'Made with CineFlow Studio.' }] }); }
 }
 
 export async function translateCaptions(req: any, res: any) {
@@ -59,7 +59,7 @@ export async function translateCaptions(req: any, res: any) {
     const out = await ai.models.generateContent({ model, contents: 'Translate only subtitle text to ' + targetLanguage + '. Preserve ids and timestamps exactly. Return JSON array. Input: ' + JSON.stringify(subtitles), config: { responseMimeType: 'application/json' } });
     const parsed = JSON.parse((out.text || '[]').trim());
     return send(res, 200, { success: true, subtitles: Array.isArray(parsed) ? parsed : parsed.subtitles || subtitles, isFallback: false });
-  } catch (e: any) { return send(res, 500, { error: e?.message || 'Caption translation failed' }); }
+  } catch (e: any) { console.error('Gemini translation failed; using fallback labels:', e?.message); return fallback(res, { subtitles: subtitles.map((s: any) => ({ ...s, text: '[' + targetLanguage + '] ' + s.text })) }); }
 }
 
 export async function scriptToTimeline(req: any, res: any) {
@@ -73,5 +73,5 @@ export async function scriptToTimeline(req: any, res: any) {
     ] } });
     const out = await ai.models.generateContent({ model, contents: 'Convert this script into a video timeline JSON object with title, colorGrade, suggestedBpm, and scenes [{title,duration,caption,transition}]. Style: ' + style + '. Script: ' + script, config: { responseMimeType: 'application/json' } });
     return send(res, 200, { success: true, timeline: JSON.parse((out.text || '{}').trim()), isFallback: false });
-  } catch (e: any) { return send(res, 500, { error: e?.message || 'Timeline generation failed' }); }
+  } catch (e: any) { console.error('Gemini timeline request failed; using fallback timeline:', e?.message); return fallback(res, { timeline: { title: 'Cinematic Story Project', colorGrade: { lut: 'kodak_portra', contrast: 1.2, saturation: 1.1 }, suggestedBpm: 110, scenes: [{ title: 'Opening', duration: 4, caption: 'Every story begins with a single frame.' }, { title: 'Main Scene', duration: 6, caption: 'The story unfolds.' }, { title: 'Closing', duration: 4, caption: 'Crafted with precision.' }] } }); }
 }
