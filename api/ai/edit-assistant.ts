@@ -1,2 +1,2 @@
-// Vercel function entry for the AI editing assistant.
-export { default } from '../../server.ts';
+import { editAssistant } from './_handler.ts';
+export default editAssistant;
