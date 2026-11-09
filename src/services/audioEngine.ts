@@ -183,10 +183,12 @@ class AudioStudioEngine {
     const activeClipIds = new Set<string>();
 
     for (const clip of clips) {
-      if (clip.type !== 'audio') continue;
+      if (clip.type !== 'audio' && clip.type !== 'video') continue;
       const track = trackById.get(clip.trackId);
       const asset = assetById.get(clip.assetId);
-      if (!track || !asset || asset.type !== 'audio') continue;
+      if (!track || !asset || asset.type !== clip.type) continue;
+      if (clip.type === 'audio' && track.type !== 'audio') continue;
+      if (clip.type === 'video' && track.type !== 'video') continue;
 
       let entry = this.audioElements.get(clip.id);
       const isActive = isPlaying && !track.muted &&
