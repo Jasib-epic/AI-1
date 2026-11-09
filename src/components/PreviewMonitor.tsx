@@ -20,6 +20,7 @@ import { computeVideoScopes, ScopeData } from '../utils/colorGrading';
 export const PreviewMonitor: React.FC = () => {
   const {
     project,
+    mediaAssets,
     currentTime,
     isPlaying,
     togglePlay,
@@ -42,6 +43,28 @@ export const PreviewMonitor: React.FC = () => {
   const scopeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isLooping, setIsLooping] = useState(true);
+  const [, setMediaRevision] = useState(0);
+
+  // Ensure every imported image/video is available to the canvas renderer.
+  // Redraw once the browser has decoded the first frame.
+  useEffect(() => {
+    const cleanups: Array<() => void> = [];
+    mediaAssets.forEach((asset) => {
+      if (asset.type !== 'video' && asset.type !== 'image') return;
+      const media = renderEngine.getOrCreateMediaElement(asset.id, asset.url, asset.type);
+      if (!media) return;
+
+      const refresh = () => setMediaRevision((revision) => revision + 1);
+      const eventNames = asset.type === 'video'
+        ? ['loadeddata', 'canplay']
+        : ['load'];
+      eventNames.forEach((eventName) => media.addEventListener(eventName, refresh));
+      cleanups.push(() => {
+        eventNames.forEach((eventName) => media.removeEventListener(eventName, refresh));
+      });
+    });
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [mediaAssets]);
 
   // Timecode Formatter: Seconds -> HH:MM:SS:FF
   const formatTimecode = (seconds: number, fps: number = 30) => {
@@ -80,6 +103,8 @@ export const PreviewMonitor: React.FC = () => {
     }
   }, [
     currentTime,
+    mediaAssets,
+    setMediaRevision,
     project.tracks,
     project.clips,
     project.subtitles,
