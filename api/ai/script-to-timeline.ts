@@ -1,2 +1,2 @@
-// Vercel function entry for script-to-timeline generation.
-export { default } from '../../server.ts';
+import { scriptToTimeline } from './_handler.ts';
+export default scriptToTimeline;
