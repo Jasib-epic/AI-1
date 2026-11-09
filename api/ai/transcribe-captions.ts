@@ -1,2 +1,2 @@
-// Vercel function entry for caption generation.
-export { default } from '../../server.ts';
+import { transcribeCaptions } from './_handler.ts';
+export default transcribeCaptions;
