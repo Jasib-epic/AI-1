@@ -1,2 +1,2 @@
-// Vercel function entry for the AI status endpoint.
-export { default } from '../../server.ts';
+import { status } from './_handler.ts';
+export default status;
