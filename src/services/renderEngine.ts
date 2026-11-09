@@ -226,6 +226,9 @@ export class VideoRenderEngine {
     let clipOpacity = clip.opacity;
     let transitionOffsetX = 0;
     let transitionScale = 1;
+    let transitionOverlay: { color: string; alpha: number } | null = null;
+    let wipeProgress: number | null = null;
+    let wipeDirection: 'left' | 'right' | null = null;
 
     // In-transition
     if (clip.transitionIn && clip.transitionIn.type !== 'none') {
@@ -234,10 +237,15 @@ export class VideoRenderEngine {
       if (progress < 1) {
         if (clip.transitionIn.type === 'crossfade' || clip.transitionIn.type === 'dip_black') {
           clipOpacity *= progress;
-        } else if (clip.transitionIn.type === 'wipe_right') {
-          transitionOffsetX = (1 - progress) * -width;
+        } else if (clip.transitionIn.type === 'dip_white') {
+          transitionOverlay = { color: '#ffffff', alpha: 1 - progress };
+        } else if (clip.transitionIn.type === 'wipe_right' || clip.transitionIn.type === 'wipe_left') {
+          wipeProgress = progress;
+          wipeDirection = clip.transitionIn.type === 'wipe_right' ? 'right' : 'left';
         } else if (clip.transitionIn.type === 'zoom_in') {
           transitionScale = 0.5 + progress * 0.5;
+        } else if (clip.transitionIn.type === 'glitch') {
+          transitionOffsetX = (Math.random() - 0.5) * (1 - progress) * 36;
         }
       }
     }
@@ -250,6 +258,13 @@ export class VideoRenderEngine {
       if (progress < 1) {
         if (clip.transitionOut.type === 'crossfade' || clip.transitionOut.type === 'dip_black') {
           clipOpacity *= progress;
+        } else if (clip.transitionOut.type === 'dip_white') {
+          transitionOverlay = { color: '#ffffff', alpha: 1 - progress };
+        } else if (clip.transitionOut.type === 'wipe_right' || clip.transitionOut.type === 'wipe_left') {
+          wipeProgress = progress;
+          wipeDirection = clip.transitionOut.type === 'wipe_right' ? 'right' : 'left';
+        } else if (clip.transitionOut.type === 'glitch') {
+          transitionOffsetX = (Math.random() - 0.5) * (1 - progress) * 36;
         }
       }
     }
@@ -266,6 +281,17 @@ export class VideoRenderEngine {
     }
     const finalScale = clip.transform.scale * transitionScale;
     ctx.scale(finalScale, finalScale);
+
+    if (wipeProgress !== null && wipeDirection) {
+      const revealWidth = width * wipeProgress;
+      ctx.beginPath();
+      if (wipeDirection === 'right') {
+        ctx.rect(-width / 2, -height / 2, revealWidth, height);
+      } else {
+        ctx.rect(width / 2 - revealWidth, -height / 2, revealWidth, height);
+      }
+      ctx.clip();
+    }
 
     // Apply Color Grade filters (via CSS filter when not in split compare or raw mode)
     const isRaw = options.forceRaw;
@@ -313,6 +339,14 @@ export class VideoRenderEngine {
       ctx.font = '24px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(clip.name, 0, 0);
+    }
+
+    if (transitionOverlay && transitionOverlay.alpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, transitionOverlay.alpha));
+      ctx.fillStyle = transitionOverlay.color;
+      ctx.fillRect(-width / 2, -height / 2, width, height);
+      ctx.restore();
     }
 
     ctx.restore();
@@ -442,6 +476,16 @@ export class VideoRenderEngine {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
       ctx.shadowBlur = 8;
       ctx.fillText(sub.text, width / 2, posY);
+    } else if (style === 'neon_glow') {
+      ctx.font = 'bold 36px "Plus Jakarta Sans", sans-serif';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#e0f2fe';
+      ctx.fillText(sub.text, width / 2, posY);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(14, 165, 233, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.strokeText(sub.text, width / 2, posY);
     } else {
       // Bold outline
       ctx.font = '800 38px "Outfit", sans-serif';
@@ -479,6 +523,15 @@ export class VideoRenderEngine {
     } else if (config.animation === 'slide_up') {
       const slide = Math.max(0, (1 - timeIntoClip * 1.5) * 40);
       ctx.translate(0, slide);
+    } else if (config.animation === 'typewriter') {
+      const visibleChars = Math.max(0, Math.ceil(text.length * Math.min(1, timeIntoClip / 2)));
+      config = { ...config, text: text.slice(0, visibleChars) };
+    } else if (config.animation === 'karaoke') {
+      ctx.shadowColor = config.color || '#ffffff';
+      ctx.shadowBlur = 18;
+    } else if (config.animation === 'kinetic') {
+      const pulse = 1 + Math.sin(timeIntoClip * 8) * 0.035;
+      ctx.scale(pulse, pulse);
     }
 
     // Outline stroke
