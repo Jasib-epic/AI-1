@@ -72,6 +72,11 @@ export const PreviewMonitor: React.FC = () => {
     return () => cleanups.forEach((cleanup) => cleanup());
   }, [mediaAssets]);
 
+  // Synchronize source video elements with the timeline playhead.
+  useEffect(() => {
+    renderEngine.syncVideoPlayback(isPlaying, currentTime, project.tracks, project.clips);
+  }, [isPlaying, currentTime, project.tracks, project.clips, mediaRevision]);
+
   // Timecode Formatter: Seconds -> HH:MM:SS:FF
   const formatTimecode = (seconds: number, fps: number = 30) => {
     const totalFrames = Math.floor(seconds * fps);
