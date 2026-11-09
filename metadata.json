@@ -1,0 +1,6 @@
+{
+  "name": "CineFlow Studio - Professional AI Video Editor",
+  "description": "Next-generation professional browser-based nonlinear video editing suite featuring multitrack timeline, real-time color grading wheels and scopes, audio mixing studio, motion graphics, and Gemini AI assistant.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
