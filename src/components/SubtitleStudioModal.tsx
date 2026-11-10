@@ -30,6 +30,8 @@ export const SubtitleStudioModal: React.FC = () => {
   const [targetLang, setTargetLang] = useState<string>('Malayalam');
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
+  const [transcriptionFile, setTranscriptionFile] = useState<File | null>(null);
+  const [transcriptionError, setTranscriptionError] = useState<string>('');
 
   if (!isSubtitleModalOpen) return null;
 
@@ -54,26 +56,41 @@ export const SubtitleStudioModal: React.FC = () => {
     { id: 'minimal_serif', name: 'Minimalist Serif', preview: 'Criterion / Film festival classic look' },
   ];
 
-  // Auto-transcribe using Gemini endpoint
+  // Transcribe real uploaded media. No filename/title-based mock transcript.
   const handleAutoTranscribe = async () => {
+    if (!transcriptionFile) {
+      setTranscriptionError('Choose a video or audio file first.');
+      return;
+    }
     setIsTranscribing(true);
+    setTranscriptionError('');
     try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read the selected media file.'));
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          resolve(result.slice(result.indexOf(',') + 1));
+        };
+        reader.readAsDataURL(transcriptionFile);
+      });
       const res = await fetch('/api/ai/transcribe-captions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          videoTitle: project.name,
+          mediaBase64: base64,
+          mimeType: transcriptionFile.type || 'video/mp4',
           duration: project.duration,
           language: 'English',
         }),
       });
-
       const data = await res.json();
-      if (data.subtitles && Array.isArray(data.subtitles)) {
-        setSubtitles(data.subtitles);
-      }
+      if (!res.ok) throw new Error(data.error || 'Transcription request failed.');
+      if (!Array.isArray(data.subtitles)) throw new Error('The transcription service returned invalid captions.');
+      setSubtitles(data.subtitles);
+      if (data.subtitles.length === 0) setTranscriptionError('No intelligible speech was detected in this media.');
     } catch (err) {
-      console.error('Transcription error:', err);
+      setTranscriptionError(err instanceof Error ? err.message : 'Transcription failed.');
     } finally {
       setIsTranscribing(false);
     }
@@ -185,6 +202,19 @@ export const SubtitleStudioModal: React.FC = () => {
 
         {/* Studio Top Control Strip */}
         <div className="px-5 py-3 border-b border-[#1c2438] bg-[#121622] flex items-center justify-between gap-4 flex-wrap">
+          {/* Source media for genuine speech recognition */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-[11px] text-slate-300">
+              Media for transcription
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,audio/*"
+                onChange={(e) => { setTranscriptionFile(e.target.files?.[0] || null); setTranscriptionError(''); }}
+                className="block mt-1 max-w-[220px] text-[10px] text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-[#283550] file:px-2 file:py-1 file:text-slate-200"
+              />
+            </label>
+            {transcriptionFile && <span className="text-[10px] text-slate-400">{transcriptionFile.name}</span>}
+          </div>
           {/* AI Auto-Transcribe Button */}
           <button
             onClick={handleAutoTranscribe}
@@ -194,6 +224,8 @@ export const SubtitleStudioModal: React.FC = () => {
             {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             <span>Auto-Transcribe Speech</span>
           </button>
+
+          {transcriptionError && <p role="alert" className="w-full text-xs text-amber-300">{transcriptionError}</p>}
 
           {/* Multilingual Translation Dropdown & Button */}
           <div className="flex items-center gap-2">
