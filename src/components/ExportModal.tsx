@@ -13,7 +13,7 @@ import { useProject } from '../context/ProjectContext';
 import { renderEngine } from '../services/renderEngine';
 
 export const ExportModal: React.FC = () => {
-  const { isExportModalOpen, setIsExportModalOpen, project } = useProject();
+  const { isExportModalOpen, setIsExportModalOpen, project, mediaAssets } = useProject();
 
   const [resolution, setResolution] = useState<{ width: number; height: number; label: string }>({
     width: 1920,
@@ -58,6 +58,8 @@ export const ExportModal: React.FC = () => {
           height: resolution.height,
           fps,
           bitrateMbps,
+          assets: mediaAssets,
+          masterAudio: project.masterAudio,
         },
         (pct, frame, total) => {
           setProgressPct(pct);
@@ -80,7 +82,8 @@ export const ExportModal: React.FC = () => {
     if (!renderedUrl) return;
     const a = document.createElement('a');
     a.href = renderedUrl;
-    a.download = `${project.name.replace(/\s+/g, '_')}_rendered.${format}`;
+    const actualExtension = renderedBlob?.type.includes('mp4') ? 'mp4' : 'webm';
+    a.download = `${project.name.replace(/\s+/g, '_')}_rendered.${actualExtension}`;
     a.click();
   };
 
