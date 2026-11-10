@@ -24,6 +24,52 @@ import { generateInitialMediaBundle } from '../utils/sampleMedia';
 import { audioEngine } from '../services/audioEngine';
 import { renderEngine } from '../services/renderEngine';
 
+
+// Local-first project recovery. Media blobs stay on this device and are never uploaded.
+const PROJECT_DB = 'cineflow-local-projects';
+const PROJECT_STORE = 'projects';
+const openProjectDatabase = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  if (typeof indexedDB === 'undefined') return reject(new Error('IndexedDB unavailable'));
+  const request = indexedDB.open(PROJECT_DB, 1);
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(PROJECT_STORE)) {
+      request.result.createObjectStore(PROJECT_STORE, { keyPath: 'id' });
+    }
+  };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+const saveLocalProject = async (project: VideoProject, assets: MediaAsset[]) => {
+  const db = await openProjectDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(PROJECT_STORE, 'readwrite');
+    tx.objectStore(PROJECT_STORE).put({
+      id: project.id,
+      project,
+      assets: assets.map(({ audioBuffer, ...asset }) => ({ ...asset, url: asset.blob ? '' : asset.url })),
+      savedAt: Date.now(),
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+};
+const loadLocalProject = async (): Promise<{ project: VideoProject; assets: MediaAsset[] } | null> => {
+  const db = await openProjectDatabase();
+  const record = await new Promise<any>((resolve, reject) => {
+    const request = db.transaction(PROJECT_STORE, 'readonly').objectStore(PROJECT_STORE).getAll();
+    request.onsuccess = () => resolve(request.result.sort((a: any, b: any) => b.savedAt - a.savedAt)[0] || null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  if (!record) return null;
+  const assets = (record.assets || []).map((asset: MediaAsset) => {
+    const url = asset.blob ? URL.createObjectURL(asset.blob) : asset.url;
+    return { ...asset, url };
+  });
+  return { project: record.project, assets };
+};
+
 const INITIAL_TRACKS: TimelineTrack[] = [
   { id: 'track-v2', name: 'V2 Overlay', type: 'video', locked: false, muted: false, solo: false, volume: 1, height: 56 },
   { id: 'track-v1', name: 'V1 Main Video', type: 'video', locked: false, muted: false, solo: false, volume: 1, height: 68 },
@@ -158,6 +204,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [scopeType, setScopeType] = useState<'waveform' | 'vectorscope' | 'histogram'>('waveform');
 
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+  const [localRestoreReady, setLocalRestoreReady] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isSubtitleModalOpen, setIsSubtitleModalOpen] = useState<boolean>(false);
@@ -172,6 +219,37 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (historyRef.current.length > 30) historyRef.current.shift();
     futureRef.current = [];
   }, []);
+
+  // Restore the most recently saved local project and its imported media.
+  useEffect(() => {
+    let cancelled = false;
+    loadLocalProject().then((saved) => {
+      if (cancelled || !saved) return;
+      setProject(saved.project);
+      setMediaAssets(saved.assets);
+      for (const asset of saved.assets) {
+        if (asset.type === 'video' || asset.type === 'image') {
+          renderEngine.getOrCreateMediaElement(asset.id, asset.url, asset.type);
+        }
+      }
+    }).catch((error) => {
+      console.warn('CineFlow local recovery unavailable:', error);
+    }).finally(() => {
+      if (!cancelled) setLocalRestoreReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Autosave edits and media metadata to IndexedDB. Imported file blobs remain local.
+  useEffect(() => {
+    if (!localRestoreReady) return;
+    const timer = window.setTimeout(() => {
+      saveLocalProject(project, mediaAssets).catch((error) => {
+        console.warn('CineFlow autosave failed:', error);
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [project, mediaAssets, localRestoreReady]);
 
   // Initialize with ready-to-edit media assets and starter clips
   useEffect(() => {
