@@ -142,6 +142,22 @@ class AudioStudioEngine {
     }
   }
 
+  /** Create a capture destination carrying the processed master mix for video export. */
+  public createExportStream(): MediaStream {
+    const ctx = this.getContext();
+    if (!this.analyser) throw new Error('Audio master bus is not initialized.');
+    const destination = ctx.createMediaStreamDestination();
+    this.analyser.connect(destination);
+    return destination.stream;
+  }
+
+  /** Stop all timeline audio elements after an export or playback stop. */
+  public stopTimelinePlayback(): void {
+    for (const entry of this.audioElements.values()) {
+      entry.element.pause();
+    }
+  }
+
   // Connect an HTML Audio / Video element into the studio mastering chain
   public registerMediaElement(id: string, element: HTMLMediaElement): GainNode {
     const ctx = this.getContext();
