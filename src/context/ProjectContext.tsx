@@ -205,6 +205,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [localRestoreReady, setLocalRestoreReady] = useState(false);
+  const [hasSavedLocalProject, setHasSavedLocalProject] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isSubtitleModalOpen, setIsSubtitleModalOpen] = useState<boolean>(false);
@@ -225,6 +226,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let cancelled = false;
     loadLocalProject().then((saved) => {
       if (cancelled || !saved) return;
+      setHasSavedLocalProject(true);
       setProject(saved.project);
       setMediaAssets(saved.assets);
       for (const asset of saved.assets) {
@@ -253,6 +255,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Initialize with ready-to-edit media assets and starter clips
   useEffect(() => {
+    if (!localRestoreReady || hasSavedLocalProject) return;
     generateInitialMediaBundle().then(({ assets }) => {
       setMediaAssets(assets);
 
@@ -351,7 +354,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSelectedClipId('clip-1');
       }
     });
-  }, []);
+  }, [localRestoreReady, hasSavedLocalProject]);
 
   // Playback clock loop
   useEffect(() => {
