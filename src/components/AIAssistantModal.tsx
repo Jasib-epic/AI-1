@@ -22,6 +22,7 @@ export const AIAssistantModal: React.FC = () => {
   } = useProject();
 
   const [prompt, setPrompt] = useState('');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'claude'>('gemini');
   const [isLoading, setIsLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{
     summary: string;
@@ -49,7 +50,7 @@ export const AIAssistantModal: React.FC = () => {
     setAiResult(null);
 
     try {
-      const res = await fetch('/api/ai/edit-assistant', {
+      const res = await fetch(aiProvider === 'claude' ? '/api/ai/claude-edit-assistant' : '/api/ai/edit-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,9 +96,9 @@ export const AIAssistantModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>Gemini AI Video Editing Assistant</span>
+                <span>{aiProvider === 'claude' ? 'Claude AI Video Editing Assistant' : 'Gemini AI Video Editing Assistant'}</span>
                 <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                  gemini-3.8-flash
+                  {aiProvider === 'claude' ? 'Claude API' : 'Gemini API'}
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400">
@@ -115,6 +116,16 @@ export const AIAssistantModal: React.FC = () => {
 
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-4">
+          <div className="flex items-center gap-2">
+            <label htmlFor="cineflow-ai-provider" className="text-xs text-slate-400">AI provider</label>
+            <select id="cineflow-ai-provider" value={aiProvider}
+              onChange={(e) => setAiProvider(e.target.value as 'gemini' | 'claude')}
+              className="bg-[#131926] text-xs text-slate-200 px-3 py-2 rounded border border-[#212b3e]">
+              <option value="gemini">Gemini (GEMINI_API_KEY)</option>
+              <option value="claude">Claude (ANTHROPIC_API_KEY)</option>
+            </select>
+          </div>
+
           {/* Prompt Input */}
           <div>
             <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
