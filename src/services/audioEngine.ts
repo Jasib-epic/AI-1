@@ -148,6 +148,10 @@ class AudioStudioEngine {
     if (!this.analyser) throw new Error('Audio master bus is not initialized.');
     const destination = ctx.createMediaStreamDestination();
     this.analyser.connect(destination);
+    const [track] = destination.stream.getAudioTracks();
+    track?.addEventListener('ended', () => {
+      try { this.analyser?.disconnect(destination); } catch { /* already disconnected */ }
+    }, { once: true });
     return destination.stream;
   }
 
