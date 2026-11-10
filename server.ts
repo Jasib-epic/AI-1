@@ -229,45 +229,41 @@ Output MUST be pure JSON with no markdown tags or extra text.`;
   }
 });
 
-// AI Caption Transcription endpoint
+// Real media transcription endpoint. Never fabricate captions when no media/API is supplied.
 app.post('/api/ai/transcribe-captions', async (req, res) => {
   try {
-    const { videoTitle, audioContext, duration, language = 'English' } = req.body;
-    const ai = getAiClient();
-
-    if (!ai) {
-      // Fallback transcription based on context
-      const dur = duration || 12;
-      return res.json({
-        success: true,
-        subtitles: [
-          { id: 'sub-1', start: 0.5, end: Math.min(3.5, dur * 0.3), text: 'Creating cinematic motion in modern video production.' },
-          { id: 'sub-2', start: Math.min(4.0, dur * 0.35), end: Math.min(7.8, dur * 0.65), text: 'Precise color grading with real-time waveform and vectorscopes.' },
-          { id: 'sub-3', start: Math.min(8.2, dur * 0.7), end: Math.min(dur - 0.5, dur * 0.95), text: 'Export in high-fidelity 4K 60FPS directly in your browser.' },
-        ],
-        isFallback: true,
-      });
+    const { mediaBase64, mimeType, language = 'English', duration } = req.body || {};
+    if (!mediaBase64 || typeof mediaBase64 !== 'string' || !mimeType) {
+      return res.status(400).json({ error: 'Choose a video or audio file to transcribe.' });
     }
-
-    const prompt = `Generate realistic, professionally timed subtitles in ${language} for a video titled "${videoTitle || 'Cinematic Video Project'}" with a duration of ${duration || 15} seconds.
-Audio context / description: "${audioContext || 'Cinematic footage with spoken dialogue and narrative rhythm'}".
-Return a JSON array of objects with fields: "id", "start" (seconds, float), "end" (seconds, float), "text" (transcribed line).
-Keep sentence lengths natural (3 to 8 words per segment) and ensure start/end timestamps are strictly sequential and within 0 to ${duration || 15}s.`;
-
+    if (mediaBase64.length > 44_000_000) {
+      return res.status(413).json({ error: 'Media is too large for direct transcription. Use a shorter or compressed file.' });
+    }
+    const ai = getAiClient();
+    if (!ai) {
+      return res.status(503).json({ error: 'Real transcription requires GEMINI_API_KEY. No sample captions were generated.' });
+    }
+    const supported = /^(audio\/(mpeg|mp3|wav|ogg|webm|mp4|m4a|aac|flac)|video\/(mp4|webm|quicktime))$/i.test(mimeType);
+    if (!supported) return res.status(415).json({ error: 'Unsupported media type. Use MP4, MOV, WebM, MP3, WAV, M4A or AAC.' });
+    const prompt = `Transcribe the supplied media into accurate subtitles in ${language}. Return only JSON with a "subtitles" array. Each item must contain "id", "start" and "end" in seconds, and "text". Use actual speech only, preserve spoken language unless it is already ${language}, keep segments readable (roughly 2-8 seconds), and keep timestamps within the media duration ${Number(duration) > 0 ? Number(duration) : 'as detected'}. If there is no intelligible speech, return an empty array. Do not invent dialogue.`;
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
+      contents: [{ inlineData: { mimeType, data: mediaBase64 } }, { text: prompt }],
+      config: { responseMimeType: 'application/json' },
     });
-
-    const parsed = JSON.parse((response.text ?? '[]').trim());
-    res.json({
-      success: true,
-      subtitles: Array.isArray(parsed) ? parsed : parsed.subtitles || [],
-      isFallback: false,
-    });
+    const parsed = JSON.parse((response.text ?? '{"subtitles":[]}').trim());
+    const subtitles = Array.isArray(parsed) ? parsed : parsed.subtitles;
+    if (!Array.isArray(subtitles)) throw new Error('Transcription model returned an invalid subtitle document.');
+    const clean = subtitles.filter((s: any) =>
+      typeof s.text === 'string' && Number.isFinite(Number(s.start)) &&
+      Number.isFinite(Number(s.end)) && Number(s.end) > Number(s.start)
+    ).map((s: any, i: number) => ({
+      id: String(s.id || `transcript-${i + 1}`),
+      start: Math.max(0, Number(s.start)),
+      end: Math.min(Number(duration) > 0 ? Number(duration) : Number(s.end), Number(s.end)),
+      text: s.text.trim(),
+    })).filter((s: any) => s.end > s.start && s.text);
+    res.json({ success: true, subtitles: clean, isFallback: false });
   } catch (error: any) {
     console.error('Error in /api/ai/transcribe-captions:', error);
     res.status(500).json({ error: error.message || 'Transcription failed' });
