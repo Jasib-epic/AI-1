@@ -159,3 +159,22 @@ input[type="range"]::-moz-range-thumb {
     touch-action: manipulation;
   }
 }
+
+
+/* Timeline sizing and touch interaction */
+.cineflow-timeline { flex: 0 0 16rem; min-height: 10rem; }
+.cineflow-timeline [onpointerdown],
+.cineflow-timeline button { touch-action: manipulation; }
+.cineflow-timeline [class*="cursor-ew-resize"] { touch-action: none; }
+@media (max-width: 640px) {
+  .cineflow-timeline {
+    flex: 0 0 32dvh;
+    min-height: 175px;
+    max-height: 38dvh;
+    width: 100%;
+  }
+  .cineflow-timeline .overflow-auto,
+  .cineflow-timeline .overflow-x-auto { overscroll-behavior-x: contain; }
+  .cineflow-timeline [class*="cursor-grab"],
+  .cineflow-timeline [class*="cursor-pointer"] { touch-action: pan-x; }
+}
