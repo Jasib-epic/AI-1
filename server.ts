@@ -46,103 +46,8 @@ app.post('/api/ai/edit-assistant', async (req, res) => {
     }
 
     const ai = getAiClient();
-    if (!ai) {
-      // Intelligent fallback when API key is not yet set in secrets
-      const lower = prompt.toLowerCase();
-      const fallbackActions: any[] = [];
-      let thought = 'Applying studio presets based on prompt analysis.';
+    if (!ai) return res.status(503).json({ error: 'Gemini is not configured. Add GEMINI_API_KEY to the server environment.' });
 
-      if (lower.includes('cinematic') || lower.includes('contrast') || lower.includes('color') || lower.includes('grade')) {
-        fallbackActions.push({
-          type: 'set_color_grade',
-          params: {
-            exposure: 0.05,
-            contrast: 1.25,
-            saturation: 1.15,
-            temperature: 8,
-            tint: -4,
-            highlights: -12,
-            shadows: -18,
-            whites: 6,
-            blacks: -10,
-            vibrance: 14,
-            lut: 'teal_orange',
-          },
-        });
-        fallbackActions.push({
-          type: 'add_effect',
-          params: {
-            effectType: 'vignette',
-            intensity: 0.35,
-          },
-        });
-        fallbackActions.push({
-          type: 'add_effect',
-          params: {
-            effectType: 'film_grain',
-            intensity: 0.18,
-          },
-        });
-        thought = 'Applied cinematic color grading: Teal & Orange LUT, raised contrast, calibrated highlights, film grain, and subtle vignette.';
-      }
-
-      if (lower.includes('subtitle') || lower.includes('caption')) {
-        fallbackActions.push({
-          type: 'add_subtitles',
-          params: {
-            subtitles: [
-              { start: 0.5, end: 3.2, text: 'Welcome to CineFlow Studio' },
-              { start: 3.5, end: 6.8, text: 'Next-Generation Nonlinear Video Editing' },
-              { start: 7.0, end: 10.5, text: 'Powered by Real-Time WebGL & AI Studio' },
-            ],
-            style: 'highlight_karaoke',
-          },
-        });
-      }
-
-      if (lower.includes('audio') || lower.includes('sound') || lower.includes('enhance')) {
-        fallbackActions.push({
-          type: 'adjust_audio',
-          params: {
-            volume: 1.0,
-            eqLow: 2,
-            eqMid: -1,
-            eqHigh: 3,
-            compression: 0.6,
-            limiter: true,
-            noiseReduction: true,
-          },
-        });
-      }
-
-      if (lower.includes('transition') || lower.includes('smooth')) {
-        fallbackActions.push({
-          type: 'add_transition',
-          params: {
-            transitionType: 'crossfade',
-            duration: 1.0,
-          },
-        });
-      }
-
-      if (lower.includes('split') || lower.includes('cut') || lower.includes('silence')) {
-        fallbackActions.push({
-          type: 'split_clip',
-          params: {
-            splitTime: 4.5,
-          },
-        });
-      }
-
-      return res.json({
-        success: true,
-        summary: thought,
-        actions: fallbackActions,
-        isFallback: true,
-      });
-    }
-
-    // Call Gemini 3.8 Flash
     const systemInstruction = `You are a professional video editor and colorist operating CineFlow Studio.
 You receive a natural language editing instruction and optional project metadata.
 You must return a valid JSON object ONLY with the following structure:
@@ -312,14 +217,7 @@ app.post('/api/ai/translate-captions', async (req, res) => {
     }
 
     const ai = getAiClient();
-    if (!ai) {
-      // Mock translation with language prefix if no API key
-      const translated = subtitles.map((s: any) => ({
-        ...s,
-        text: `[${targetLanguage}] ${s.text}`,
-      }));
-      return res.json({ success: true, subtitles: translated, isFallback: true });
-    }
+    if (!ai) return res.status(503).json({ error: 'Translation requires GEMINI_API_KEY. No placeholder translation was generated.' });
 
     const prompt = `Translate the following video subtitles into ${targetLanguage}.
 CRITICAL: Preserve the exact "id", "start", and "end" timestamps.
