@@ -83,3 +83,79 @@ input[type="range"]::-moz-range-thumb {
   background-size: 50px 100%;
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
+
+
+/* Responsive CineFlow workspace: desktop keeps all panels visible; smaller
+   screens switch between focused panels without removing editor functionality. */
+.cineflow-shell { min-width: 0; min-height: 0; }
+.cineflow-workspace { min-width: 0; min-height: 0; }
+.cineflow-mobile-nav { display: none; }
+.cineflow-mobile-nav button {
+  border: 1px solid #263148;
+  border-radius: 7px;
+  padding: 8px 13px;
+  color: #94a3b8;
+  background: #101522;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cineflow-mobile-nav button.active {
+  color: #fff;
+  border-color: #3b82f6;
+  background: #1b2b49;
+}
+.cineflow-workspace > aside { min-width: 0; }
+.cineflow-workspace > aside:first-child { width: 320px; max-width: 28vw; }
+.cineflow-workspace > aside:last-child { width: 320px; max-width: 28vw; }
+.cineflow-workspace > * { min-height: 0; }
+@media (max-width: 900px) {
+  .cineflow-shell > header {
+    height: auto !important;
+    min-height: 48px;
+    padding: 7px 10px !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
+  }
+  .cineflow-shell > header nav { order: 3; width: 100%; overflow-x: auto; }
+  .cineflow-shell > header nav button { padding-left: 9px; padding-right: 9px; }
+  .cineflow-shell > header > div { min-width: 0; }
+  .cineflow-shell > header > div:last-child { gap: 6px; }
+  .cineflow-workspace > aside:first-child,
+  .cineflow-workspace > aside:last-child { max-width: none; }
+  .cineflow-workspace > aside:first-child { width: 260px; }
+  .cineflow-workspace > aside:last-child { width: 280px; }
+}
+@media (max-width: 640px) {
+  .cineflow-shell { height: 100dvh; }
+  .cineflow-shell > header { flex-wrap: nowrap; overflow-x: auto; }
+  .cineflow-shell > header > div:first-child { gap: 7px; }
+  .cineflow-shell > header > div:first-child > div:nth-child(2),
+  .cineflow-shell > header > div:first-child > button { display: none; }
+  .cineflow-shell > header nav { display: none; }
+  .cineflow-shell > header > div:last-child { margin-left: auto; }
+  .cineflow-shell > header > div:last-child button { padding: 7px 9px; }
+  .cineflow-mobile-nav {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 7px 9px;
+    background: #0b0e16;
+    border-bottom: 1px solid #20283a;
+  }
+  .cineflow-mobile-nav button { flex: 1; }
+  .cineflow-workspace { position: relative; }
+  .cineflow-workspace > aside:first-child,
+  .cineflow-workspace > aside:last-child,
+  .cineflow-workspace > *:not(:nth-child(2)) { display: none; }
+  .cineflow-workspace.panel-media > aside:first-child { display: flex; width: 100%; }
+  .cineflow-workspace.panel-preview > *:nth-child(2) { display: flex; width: 100%; min-width: 0; }
+  .cineflow-workspace.panel-inspector > aside:last-child { display: flex; width: 100%; }
+  .cineflow-shell > :last-of-type {
+    max-height: 34dvh;
+    min-height: 170px;
+    flex: 0 0 34dvh;
+  }
+  .cineflow-shell button, .cineflow-shell input, .cineflow-shell select {
+    touch-action: manipulation;
+  }
+}
