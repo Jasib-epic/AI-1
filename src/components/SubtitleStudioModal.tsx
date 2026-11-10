@@ -28,6 +28,7 @@ export const SubtitleStudioModal: React.FC = () => {
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>(project.subtitles);
   const [selectedStyle, setSelectedStyle] = useState<SubtitleStyle>(project.subtitleStyle);
   const [targetLang, setTargetLang] = useState<string>('Malayalam');
+  const [sourceLang, setSourceLang] = useState<string>('Auto-detect');
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [transcriptionFile, setTranscriptionFile] = useState<File | null>(null);
@@ -81,7 +82,7 @@ export const SubtitleStudioModal: React.FC = () => {
           mediaBase64: base64,
           mimeType: transcriptionFile.type || 'video/mp4',
           duration: project.duration,
-          language: 'English',
+          language: sourceLang,
         }),
       });
       const data = await res.json();
@@ -226,6 +227,14 @@ export const SubtitleStudioModal: React.FC = () => {
           </button>
 
           {transcriptionError && <p role="alert" className="w-full text-xs text-amber-300">{transcriptionError}</p>}
+
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-slate-400" htmlFor="cineflow-source-language">Speech language</label>
+            <select id="cineflow-source-language" value={sourceLang} onChange={(e) => setSourceLang(e.target.value)}
+              className="bg-[#182030] text-xs text-slate-200 px-2 py-1.5 rounded border border-[#242f46]">
+              {['Auto-detect','English','Malayalam','Hindi','Arabic','Tamil','Telugu','Kannada','Spanish','French','German','Japanese'].map((lang) => <option key={lang} value={lang}>{lang}</option>)}
+            </select>
+          </div>
 
           {/* Multilingual Translation Dropdown & Button */}
           <div className="flex items-center gap-2">
