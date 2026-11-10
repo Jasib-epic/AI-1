@@ -229,6 +229,39 @@ Output MUST be pure JSON with no markdown tags or extra text.`;
   }
 });
 
+// Optional Claude editing assistant. Requires the user's own server-side ANTHROPIC_API_KEY.
+app.post('/api/ai/claude-edit-assistant', async (req, res) => {
+  try {
+    const { prompt, projectSummary } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') return res.status(400).json({ error: 'Prompt is required.' });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'Claude is not configured. Add ANTHROPIC_API_KEY to the server environment.' });
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-latest',
+        max_tokens: 1800,
+        system: `You are an editing-plan generator for CineFlow Studio. Return only valid JSON: {"summary":string,"actions":array}. Only use these action types: set_color_grade, add_effect, add_subtitles, adjust_audio, add_transition, split_clip. Never claim to analyze media that was not supplied. Make conservative, supported suggestions. Project: ${JSON.stringify(projectSummary || {})}`,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const payload: any = await response.json();
+    if (!response.ok) return res.status(response.status).json({ error: payload.error?.message || 'Claude request failed.' });
+    const textBlock = (payload.content || []).find((item: any) => item.type === 'text')?.text || '{}';
+    const cleaned = textBlock.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+    const result = JSON.parse(cleaned);
+    res.json({ success: true, summary: result.summary || 'Editing plan generated.', actions: Array.isArray(result.actions) ? result.actions : [], provider: 'claude', isFallback: false });
+  } catch (error: any) {
+    console.error('Claude editing assistant error:', error);
+    res.status(500).json({ error: error.message || 'Claude request failed.' });
+  }
+});
+
 // Real media transcription endpoint. Never fabricate captions when no media/API is supplied.
 app.post('/api/ai/transcribe-captions', async (req, res) => {
   try {
