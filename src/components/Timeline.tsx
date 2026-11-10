@@ -121,8 +121,8 @@ export const Timeline: React.FC = () => {
       window.addEventListener('pointerup', handleMouseUp);
     }
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handleMouseMove);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [
     isScrubbingRuler,
@@ -137,7 +137,7 @@ export const Timeline: React.FC = () => {
   ]);
 
   // Handle Clip Click (Selection or Razor Cut)
-  const handleClipPointerDown = (e: React.MouseEvent, clip: TimelineClip) => {
+  const handleClipPointerDown = (e: React.PointerEvent, clip: TimelineClip) => {
     e.stopPropagation();
 
     if (activeTool === 'razor') {
@@ -158,7 +158,7 @@ export const Timeline: React.FC = () => {
   };
 
   // Handle Trim Handle Mousedown
-  const handleTrimPointerDown = (e: React.MouseEvent, clip: TimelineClip, edge: 'left' | 'right') => {
+  const handleTrimPointerDown = (e: React.PointerEvent, clip: TimelineClip, edge: 'left' | 'right') => {
     e.stopPropagation();
     setTrimmingClip({
       id: clip.id,
@@ -362,7 +362,7 @@ export const Timeline: React.FC = () => {
             {/* Top Timecode Ruler */}
             <div
               ref={rulerRef}
-              onMouseDown={handleRulerMouseDown}
+              onPointerDown={handleRulerPointerDown}
               className="h-6 bg-[#0d1017] border-b border-[#1c2438] relative cursor-pointer select-none"
             >
               {rulerTicks.map((t) => (
@@ -418,7 +418,7 @@ export const Timeline: React.FC = () => {
                         return (
                           <div
                             key={clip.id}
-                            onMouseDown={(e) => handleClipMouseDown(e, clip)}
+                            onPointerDown={(e) => handleClipPointerDown(e, clip)}
                             className={`absolute top-1 bottom-1 rounded overflow-hidden cursor-pointer select-none transition-shadow flex flex-col justify-between p-1.5 ${
                               isSelected
                                 ? 'ring-2 ring-blue-400 z-10 shadow-lg shadow-blue-500/20'
@@ -437,7 +437,7 @@ export const Timeline: React.FC = () => {
                           >
                             {/* Left Trim Handle */}
                             <div
-                              onMouseDown={(e) => handleTrimMouseDown(e, clip, 'left')}
+                              onPointerDown={(e) => handleTrimPointerDown(e, clip, 'left')}
                               className="absolute left-0 top-0 bottom-0 w-2 hover:bg-white/40 cursor-w-resize"
                             />
 
@@ -465,7 +465,7 @@ export const Timeline: React.FC = () => {
 
                             {/* Right Trim Handle */}
                             <div
-                              onMouseDown={(e) => handleTrimMouseDown(e, clip, 'right')}
+                              onPointerDown={(e) => handleTrimPointerDown(e, clip, 'right')}
                               className="absolute right-0 top-0 bottom-0 w-2 hover:bg-white/40 cursor-e-resize"
                             />
                           </div>
