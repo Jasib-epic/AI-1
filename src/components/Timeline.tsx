@@ -73,7 +73,7 @@ export const Timeline: React.FC = () => {
   );
 
   // Ruler Scrubbing Handler
-  const handleRulerMouseDown = (e: React.MouseEvent) => {
+  const handleRulerPointerDown = (e: React.PointerEvent) => {
     if (!rulerRef.current) return;
     const rect = rulerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -117,8 +117,8 @@ export const Timeline: React.FC = () => {
     };
 
     if (isScrubbingRuler || draggingClipId || trimmingClip) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handleMouseMove);
+      window.addEventListener('pointerup', handleMouseUp);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -137,7 +137,7 @@ export const Timeline: React.FC = () => {
   ]);
 
   // Handle Clip Click (Selection or Razor Cut)
-  const handleClipMouseDown = (e: React.MouseEvent, clip: TimelineClip) => {
+  const handleClipPointerDown = (e: React.MouseEvent, clip: TimelineClip) => {
     e.stopPropagation();
 
     if (activeTool === 'razor') {
@@ -158,7 +158,7 @@ export const Timeline: React.FC = () => {
   };
 
   // Handle Trim Handle Mousedown
-  const handleTrimMouseDown = (e: React.MouseEvent, clip: TimelineClip, edge: 'left' | 'right') => {
+  const handleTrimPointerDown = (e: React.MouseEvent, clip: TimelineClip, edge: 'left' | 'right') => {
     e.stopPropagation();
     setTrimmingClip({
       id: clip.id,
@@ -179,7 +179,7 @@ export const Timeline: React.FC = () => {
   }
 
   return (
-    <div className="h-64 bg-[#0a0d14] border-t border-[#1c2438] flex flex-col select-none shrink-0 overflow-hidden">
+    <div className="cineflow-timeline h-64 bg-[#0a0d14] border-t border-[#1c2438] flex flex-col select-none shrink-0 overflow-hidden">
       {/* Timeline Control Toolbar */}
       <div className="h-9 bg-[#0e121b] border-b border-[#1c2438] px-3 flex items-center justify-between">
         {/* Tools */}
