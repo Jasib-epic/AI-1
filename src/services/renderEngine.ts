@@ -7,6 +7,7 @@ import {
   ColorGradeSettings,
 } from '../types/editor';
 import { applyPixelColorGrade, getCssFilterString } from '../utils/colorGrading';
+import { audioEngine } from './audioEngine';
 
 /**
  * High-Performance Compositing and Video Rendering Engine
@@ -587,10 +588,12 @@ export class VideoRenderEngine {
       height: number;
       fps: number;
       bitrateMbps: number;
+      assets?: import('../types/editor').MediaAsset[];
+      masterAudio?: import('../types/editor').MasterAudioSettings;
     },
     onProgress: (progress: number, frame: number, total: number) => void
   ): Promise<Blob> {
-    const { tracks, clips, subtitles, subtitleStyle, duration, width, height, fps, bitrateMbps } =
+    const { tracks, clips, subtitles, subtitleStyle, duration, width, height, fps, bitrateMbps, assets = [], masterAudio } =
       projectData;
 
     const exportCanvas = document.createElement('canvas');
@@ -598,6 +601,17 @@ export class VideoRenderEngine {
     exportCanvas.height = height;
 
     const stream = exportCanvas.captureStream(fps);
+    // Mix timeline audio into the exported file through the same Web Audio master chain.
+    let exportAudioStream: MediaStream | null = null;
+    if (assets.length > 0) {
+      try {
+        if (masterAudio) audioEngine.updateMasterSettings(masterAudio);
+        exportAudioStream = audioEngine.createExportStream();
+        exportAudioStream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      } catch (error) {
+        console.warn('Audio export unavailable; exporting video only:', error);
+      }
+    }
     const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')
       ? 'video/mp4;codecs=avc1'
       : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -619,6 +633,9 @@ export class VideoRenderEngine {
     return new Promise((resolve) => {
       recorder.onstop = () => {
         const resultBlob = new Blob(chunks, { type: mimeType });
+        stream.getTracks().forEach((track) => track.stop());
+        exportAudioStream?.getTracks().forEach((track) => track.stop());
+        audioEngine.stopTimelinePlayback();
         resolve(resultBlob);
       };
 
@@ -629,6 +646,8 @@ export class VideoRenderEngine {
 
       const renderInterval = setInterval(() => {
         const time = currentFrame * step;
+        if (assets.length > 0) audioEngine.syncTimelinePlayback(clips, tracks, assets, time, true);
+        this.syncVideoPlayback(true, time, tracks, clips);
         this.renderFrame(exportCanvas, time, tracks, clips, subtitles, subtitleStyle);
 
         currentFrame++;
