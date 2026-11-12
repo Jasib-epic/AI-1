@@ -48,7 +48,7 @@ export const Timeline: React.FC = () => {
   const [clipOriginalStart, setClipOriginalStart] = useState<number>(0);
   const [trimmingClip, setTrimmingClip] = useState<{ id: string; edge: 'left' | 'right'; origStart: number; origDur: number } | null>(null);
 
-  const TRACK_HEADER_WIDTH = 200; // px
+  const TRACK_HEADER_WIDTH = 164; // px
 
   // Format timecode for ruler labels (00:01, 00:02, etc.)
   const formatRulerTime = (seconds: number) => {
