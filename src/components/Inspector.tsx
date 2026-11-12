@@ -340,6 +340,7 @@ export const Inspector: React.FC = () => {
                 );
               })}
             </div>
+          </div>
           </details>
         </div>
       )}
