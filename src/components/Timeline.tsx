@@ -287,10 +287,10 @@ export const Timeline: React.FC = () => {
       </div>
 
       {/* Main Multitrack Canvas Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Left Column: Fixed Track Headers */}
         <div
-          className="bg-[#0b0e17] border-r border-[#1c2438] shrink-0 z-20 flex flex-col"
+          className="bg-[#0b0e17] border-r border-[#1c2438] shrink-0 z-20 flex flex-col min-h-0"
           style={{ width: `${TRACK_HEADER_WIDTH}px` }}
         >
           {/* Top spacer matching ruler height */}
@@ -301,7 +301,7 @@ export const Timeline: React.FC = () => {
           </div>
 
           {/* Track Headers */}
-          <div ref={trackHeaderScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div ref={trackHeaderScrollRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {project.tracks.map((track) => (
               <div
                 key={track.id}
@@ -365,9 +365,9 @@ export const Timeline: React.FC = () => {
               trackHeaderScrollRef.current.scrollTop = e.currentTarget.scrollTop;
             }
           }}
-          className="flex-1 overflow-auto relative bg-[#090b12]"
+          className="flex-1 min-h-0 min-w-0 overflow-auto relative bg-[#090b12]"
         >
-          <div style={{ width: `${totalTimelineWidth}px` }} className="relative h-full">
+          <div style={{ width: `${totalTimelineWidth}px` }} className="relative min-h-full">
             {/* Top Timecode Ruler */}
             <div
               ref={rulerRef}
