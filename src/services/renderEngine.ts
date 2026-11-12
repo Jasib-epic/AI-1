@@ -54,11 +54,13 @@ export class VideoRenderEngine {
 
     if (type === 'video') {
       const video = document.createElement('video');
-      video.crossOrigin = 'anonymous';
-      video.src = url;
+      // Blob URLs from local imports do not need CORS. Set the source only
+      // after playback attributes so the browser starts loading consistently.
       video.preload = 'auto';
       video.muted = true; // muted for canvas painting; audio handled via Web Audio
       video.playsInline = true;
+      video.src = url;
+      video.load();
       this.mediaElements.set(assetId, video);
       return video;
     } else if (type === 'image') {
@@ -314,11 +316,17 @@ export class VideoRenderEngine {
     if (media) {
       if (media instanceof HTMLVideoElement) {
         // Sync video element seek time
-        if (Math.abs(media.currentTime - clipLocalTime) > 0.15) {
-          media.currentTime = clipLocalTime;
+        // Avoid seeking before metadata is available. Setting currentTime too
+        // early can be ignored by some browsers and leaves the canvas black.
+        if (media.readyState >= HTMLMediaElement.HAVE_METADATA && Math.abs(media.currentTime - clipLocalTime) > 0.15) {
+          try { media.currentTime = clipLocalTime; } catch { /* wait for metadata */ }
         }
-        if (media.readyState >= 2) {
-          ctx.drawImage(media, -width / 2, -height / 2, width, height);
+        if (media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && media.videoWidth > 0 && media.videoHeight > 0) {
+          try {
+            ctx.drawImage(media, -width / 2, -height / 2, width, height);
+          } catch {
+            // The next decoded frame event will trigger another preview render.
+          }
         }
       } else if (media instanceof HTMLImageElement) {
         if (media.complete && media.naturalWidth > 0) {
