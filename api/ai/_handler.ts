@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 const model = 'gemini-3.8-flash';
 const getAI = () => process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 const send = (res: any, status: number, body: unknown) => res.status(status).json(body);
-const fallback = (res: any, body: unknown) => send(res, 200, { success: true, ...body, isFallback: true });
+const fallback = (res: any, _body: unknown) => send(res, 503, { success: false, error: 'The AI service is unavailable or not configured. No generated content was created. Check GEMINI_API_KEY and retry when the service is available.' });
 
 export async function status(_req: any, res: any) {
   return send(res, 200, { status: 'ok', hasApiKey: Boolean(process.env.GEMINI_API_KEY), model });
