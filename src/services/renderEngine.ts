@@ -56,6 +56,7 @@ export class VideoRenderEngine {
       const video = document.createElement('video');
       // Blob URLs from local imports do not need CORS. Set the source only
       // after playback attributes so the browser starts loading consistently.
+      if (!url.startsWith('blob:')) video.crossOrigin = 'anonymous';
       video.preload = 'auto';
       video.muted = true; // muted for canvas painting; audio handled via Web Audio
       video.playsInline = true;
