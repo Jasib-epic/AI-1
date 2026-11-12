@@ -40,6 +40,7 @@ export const Timeline: React.FC = () => {
   } = useProject();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackHeaderScrollRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
   const [isScrubbingRuler, setIsScrubbingRuler] = useState(false);
   const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
@@ -300,7 +301,7 @@ export const Timeline: React.FC = () => {
           </div>
 
           {/* Track Headers */}
-          <div className="flex-1 overflow-hidden">
+          <div ref={trackHeaderScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
             {project.tracks.map((track) => (
               <div
                 key={track.id}
@@ -357,13 +358,21 @@ export const Timeline: React.FC = () => {
         </div>
 
         {/* Right Area: Scrollable Tracks & Ruler */}
-        <div ref={containerRef} className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[#090b12]">
+        <div
+          ref={containerRef}
+          onScroll={(e) => {
+            if (trackHeaderScrollRef.current) {
+              trackHeaderScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
+          }}
+          className="flex-1 overflow-auto relative bg-[#090b12]"
+        >
           <div style={{ width: `${totalTimelineWidth}px` }} className="relative h-full">
             {/* Top Timecode Ruler */}
             <div
               ref={rulerRef}
               onPointerDown={handleRulerPointerDown}
-              className="h-6 bg-[#0d1017] border-b border-[#1c2438] relative cursor-pointer select-none"
+              className="sticky top-0 z-20 h-6 bg-[#0d1017] border-b border-[#1c2438] relative cursor-pointer select-none"
             >
               {rulerTicks.map((t) => (
                 <div
