@@ -23,6 +23,7 @@ import { DEFAULT_COLOR_GRADE } from '../utils/colorGrading';
 import { generateInitialMediaBundle } from '../utils/sampleMedia';
 import { audioEngine } from '../services/audioEngine';
 import { renderEngine } from '../services/renderEngine';
+import { browserCanDecodeVideo, transcodeVideoForBrowser } from '../services/videoCompatibility';
 
 
 // Local-first project recovery. Media blobs stay on this device and are never uploaded.
@@ -413,9 +414,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // the exact asset ID used by timeline clips.
   const importUserFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    for (const file of fileArray) {
-      const url = URL.createObjectURL(file);
+    for (const originalFile of fileArray) {
+      let file = originalFile;
       const isVideo = file.type.startsWith('video/');
+      if (isVideo && !(await browserCanDecodeVideo(file))) {
+        try {
+          file = await transcodeVideoForBrowser(file);
+        } catch (error) {
+          console.error('Automatic video compatibility conversion failed:', error);
+          window.alert('CineFlow could not automatically convert this video. The original file was not added. Try a different video format.');
+          continue;
+        }
+        if (!(await browserCanDecodeVideo(file))) {
+          window.alert('The converted video still cannot be decoded by this browser. This file was not added.');
+          continue;
+        }
+      }
+      const url = URL.createObjectURL(file);
       const isAudio = file.type.startsWith('audio/');
       const isImage = file.type.startsWith('image/');
       const assetId = `asset-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
