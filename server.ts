@@ -255,19 +255,8 @@ app.post('/api/ai/script-to-timeline', async (req, res) => {
     const ai = getAiClient();
 
     if (!ai) {
-      return res.json({
-        success: true,
-        timeline: {
-          title: 'Cinematic Story Project',
-          colorGrade: { lut: 'kodak_portra', contrast: 1.2, saturation: 1.1 },
-          suggestedBpm: 110,
-          scenes: [
-            { title: 'Intro Scene', duration: 4, caption: 'Every story begins with a single frame.' },
-            { title: 'Climax Action', duration: 6, caption: 'Pushing boundaries beyond the ordinary.' },
-            { title: 'Resolution Outro', duration: 4, caption: 'Crafted with precision.' },
-          ],
-        },
-        isFallback: true,
+      return res.status(503).json({
+        error: 'Script-to-timeline generation requires GEMINI_API_KEY. No sample timeline was generated.',
       });
     }
 
