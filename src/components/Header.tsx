@@ -60,8 +60,6 @@ export const Header: React.FC = () => {
     { id: 'color', label: 'Color', icon: <Palette className="w-3.5 h-3.5" /> },
     { id: 'effects', label: 'Effects', icon: <Wand2 className="w-3.5 h-3.5" /> },
     { id: 'audio', label: 'Audio', icon: <Volume2 className="w-3.5 h-3.5" /> },
-    { id: 'captions', label: 'Captions', icon: <Subtitles className="w-3.5 h-3.5" /> },
-    { id: 'export', label: 'Export', icon: <Download className="w-3.5 h-3.5" /> },
   ];
 
   return (
