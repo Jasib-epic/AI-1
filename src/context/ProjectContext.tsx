@@ -492,7 +492,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         blob: file,
       };
 
-      setMediaAssets((prev) => [...prev, newAsset]);
+      setMediaAssets((prev) => {
+        // Prevent the same source file from appearing in the media bin more than once.
+        // Include file metadata so separate files with the same name are still allowed.
+        const duplicate = prev.some((asset) => {
+          const existing = asset.blob as File | undefined;
+          return Boolean(
+            existing &&
+            existing.name === file.name &&
+            existing.size === file.size &&
+            existing.lastModified === file.lastModified &&
+            existing.type === file.type
+          );
+        });
+        if (duplicate) {
+          URL.revokeObjectURL(url);
+          return prev;
+        }
+        return [...prev, newAsset];
+      });
     }
   }, []);
 
