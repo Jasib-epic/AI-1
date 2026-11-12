@@ -1,37 +1,26 @@
 import React, { useState } from 'react';
 import {
-  Play,
-  Pause,
   Undo2,
   Redo2,
   Sparkles,
   Download,
-  Sliders,
-  Palette,
-  Wand2,
-  Volume2,
-  Subtitles,
   Film,
   Monitor,
   Check,
 } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
-import { WorkspaceTab } from '../types/editor';
 
 export const Header: React.FC = () => {
   const {
     project,
     updateProjectName,
     updateResolution,
-    workspaceTab,
-    setWorkspaceTab,
     canUndo,
     canRedo,
     undo,
     redo,
     setIsAiModalOpen,
     setIsExportModalOpen,
-    setIsSubtitleModalOpen,
   } = useProject();
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -53,13 +42,6 @@ export const Header: React.FC = () => {
     { width: 1080, height: 1920, label: '1080p 9:16 Vertical (Reels/Shorts)', aspect: '9:16' },
     { width: 1080, height: 1080, label: '1080p 1:1 Square (Feed)', aspect: '1:1' },
     { width: 1080, height: 1350, label: '1080p 4:5 Portrait', aspect: '4:5' },
-  ];
-
-  const tabs: { id: WorkspaceTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'edit', label: 'Edit', icon: <Film className="w-3.5 h-3.5" /> },
-    { id: 'color', label: 'Color', icon: <Palette className="w-3.5 h-3.5" /> },
-    { id: 'effects', label: 'Effects', icon: <Wand2 className="w-3.5 h-3.5" /> },
-    { id: 'audio', label: 'Audio', icon: <Volume2 className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -122,35 +104,6 @@ export const Header: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Zone 2: Workspace Mode Tabs */}
-      <nav className="flex items-center bg-[#0b0e17] p-1 rounded-lg border border-[#1b2234]">
-        {tabs.map((tab) => {
-          const isActive = workspaceTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'export') {
-                  setIsExportModalOpen(true);
-                } else if (tab.id === 'captions') {
-                  setIsSubtitleModalOpen(true);
-                } else {
-                  setWorkspaceTab(tab.id);
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-all whitespace-nowrap ${
-                isActive
-                  ? 'bg-[#1e273c] text-white shadow-sm shadow-black/40'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#141926]'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
 
       {/* Zone 3: Aspect Ratio, AI Studio, and Render Export */}
       <div className="flex items-center gap-3 shrink-0">
