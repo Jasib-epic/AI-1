@@ -262,8 +262,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Pre-populate clips on timeline
       const cyber = assets.find((a) => a.id === 'asset-cyber-1');
       const sunset = assets.find((a) => a.id === 'asset-sunset-2');
-      const music = assets.find((a) => a.id === 'asset-lofi-1');
-      const sfx = assets.find((a) => a.id === 'asset-whoosh-1');
 
       if (cyber && sunset) {
         renderEngine.getOrCreateMediaElement(cyber.id, cyber.url, 'video');
@@ -306,44 +304,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             transitionIn: { type: 'crossfade', duration: 1.0 },
           },
         ];
-
-        if (music) {
-          starterClips.push({
-            id: 'clip-music-1',
-            trackId: 'track-a2',
-            assetId: music.id,
-            name: music.name,
-            type: 'audio',
-            start: 0,
-            duration: 12,
-            offset: 0,
-            speed: 1,
-            volume: 0.75,
-            opacity: 1,
-            transform: { x: 0, y: 0, scale: 1, rotation: 0, fit: 'cover' },
-            colorGrade: { ...DEFAULT_COLOR_GRADE },
-            effects: [],
-          });
-        }
-
-        if (sfx) {
-          starterClips.push({
-            id: 'clip-sfx-1',
-            trackId: 'track-a1',
-            assetId: sfx.id,
-            name: sfx.name,
-            type: 'audio',
-            start: 5.2,
-            duration: 1.5,
-            offset: 0,
-            speed: 1,
-            volume: 0.9,
-            opacity: 1,
-            transform: { x: 0, y: 0, scale: 1, rotation: 0, fit: 'cover' },
-            colorGrade: { ...DEFAULT_COLOR_GRADE },
-            effects: [],
-          });
-        }
 
         setProject((prev) => ({
           ...prev,
