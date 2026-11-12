@@ -73,22 +73,26 @@ export const Timeline: React.FC = () => {
     [zoomLevel]
   );
 
+  // Convert viewport pointer coordinates into timeline-content time.
+  // scrollLeft is required because the ruler moves horizontally inside its scroller.
+  const getTimelineTimeAtClientX = useCallback((clientX: number) => {
+    if (!rulerRef.current) return 0;
+    const rect = rulerRef.current.getBoundingClientRect();
+    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
+    return pixelToTime(clientX - rect.left + scrollLeft);
+  }, [pixelToTime]);
+
   // Ruler Scrubbing Handler
   const handleRulerPointerDown = (e: React.PointerEvent) => {
     if (!rulerRef.current) return;
-    const rect = rulerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const time = pixelToTime(clickX);
-    seek(time);
+    seek(getTimelineTimeAtClientX(e.clientX));
     setIsScrubbingRuler(true);
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isScrubbingRuler && rulerRef.current) {
-        const rect = rulerRef.current.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        seek(pixelToTime(clickX));
+        seek(getTimelineTimeAtClientX(e.clientX));
       } else if (trimmingClip) {
         // Handle clip edge trimming
         const deltaX = e.clientX - dragStartX;
@@ -133,6 +137,7 @@ export const Timeline: React.FC = () => {
     clipOriginalStart,
     zoomLevel,
     pixelToTime,
+    getTimelineTimeAtClientX,
     seek,
     updateClip,
   ]);
@@ -144,8 +149,7 @@ export const Timeline: React.FC = () => {
     if (activeTool === 'razor') {
       // Split clip directly where clicked
       if (rulerRef.current) {
-        const rect = rulerRef.current.getBoundingClientRect();
-        const clickTime = pixelToTime(e.clientX - rect.left);
+        const clickTime = getTimelineTimeAtClientX(e.clientX);
         seek(clickTime);
         splitClipAtPlayhead(clip.id);
       }
