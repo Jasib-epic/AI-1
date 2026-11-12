@@ -44,6 +44,7 @@ export const PreviewMonitor: React.FC = () => {
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isLooping, setIsLooping] = useState(true);
   const [mediaRevision, setMediaRevision] = useState(0);
+  const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
   // Ensure every imported image/video is available to the canvas renderer.
   // Redraw once the browser has decoded the first frame.
@@ -54,11 +55,25 @@ export const PreviewMonitor: React.FC = () => {
       const media = renderEngine.getOrCreateMediaElement(asset.id, asset.url, asset.type);
       if (!media) return;
 
-      const refresh = () => setMediaRevision((revision) => revision + 1);
+      const refresh = () => {
+        setVideoLoadError(null);
+        setMediaRevision((revision) => revision + 1);
+      };
+      const onVideoError = () => {
+        if (media instanceof HTMLVideoElement) {
+          const code = media.error?.code;
+          const reason = code === 3 || code === 4
+            ? 'This MP4 uses a codec this browser cannot decode. Try an H.264 (AVC) MP4.'
+            : 'The video could not be loaded. Try importing the file again.';
+          setVideoLoadError(reason);
+        }
+        setMediaRevision((revision) => revision + 1);
+      };
       const eventNames = asset.type === 'video'
-        ? ['loadeddata', 'canplay']
+        ? ['loadedmetadata', 'loadeddata', 'canplay', 'seeked', 'timeupdate']
         : ['load'];
       eventNames.forEach((eventName) => media.addEventListener(eventName, refresh));
+      if (asset.type === 'video') media.addEventListener('error', onVideoError);
       if (
         (media instanceof HTMLVideoElement && media.readyState >= 2) ||
         (media instanceof HTMLImageElement && media.complete && media.naturalWidth > 0)
@@ -67,6 +82,7 @@ export const PreviewMonitor: React.FC = () => {
       }
       cleanups.push(() => {
         eventNames.forEach((eventName) => media.removeEventListener(eventName, refresh));
+        if (asset.type === 'video') media.removeEventListener('error', onVideoError);
       });
     });
     return () => cleanups.forEach((cleanup) => cleanup());
@@ -355,6 +371,11 @@ export const PreviewMonitor: React.FC = () => {
             height={project.resolution.height}
             className="w-full h-full object-contain bg-black"
           />
+          {videoLoadError && (
+            <div className="absolute inset-x-3 bottom-3 rounded-md border border-red-500/30 bg-black/90 px-3 py-2 text-xs text-red-200">
+              {videoLoadError}
+            </div>
+          )}
 
           {/* Interactive Split Comparison Slider Line */}
           {splitCompare && (
