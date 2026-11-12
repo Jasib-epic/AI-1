@@ -106,7 +106,7 @@ export const MediaBrowser: React.FC = () => {
   );
 
   return (
-    <aside className="w-80 bg-[#0f131d] border-r border-[#1e2638] flex flex-col shrink-0 select-none overflow-hidden">
+    <aside className="w-80 bg-[#0f131d] border-r border-[#1e2638] flex flex-row shrink-0 select-none overflow-hidden">
       {/* Compact tool rail */}
       <nav className="cineflow-tool-rail" aria-label="Editing tools">
         {([
@@ -260,39 +260,6 @@ export const MediaBrowser: React.FC = () => {
                 ))}
               </div>
             </details>
-          </div>
-        </div>
-      )}
-
-      {/* Transition presets are available inside Effects. */}
-      {false && activeTab === 'effects' && (
-        <div className="flex-1 flex flex-col p-3 overflow-y-auto">
-          <p className="text-[11px] text-slate-400 mb-3">
-            Apply cinematic transitions to the selected clip:
-          </p>
-
-          <div className="space-y-2">
-            {transitionsCatalog.map((tr) => (
-              <button
-                key={tr.type}
-                disabled={!selectedClipId}
-                onClick={() =>
-                  selectedClipId &&
-                  setClipTransition(selectedClipId, { type: tr.type, duration: 0.8 })
-                }
-                className={`w-full text-left p-2.5 rounded-lg border transition-all flex items-center justify-between ${
-                  selectedClipId
-                    ? 'bg-[#151b28] hover:bg-[#1f283c] border-[#212b3e] text-slate-200 cursor-pointer'
-                    : 'bg-[#121620] border-[#1b2232] text-slate-600 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <div>
-                  <div className="text-xs font-semibold text-slate-200">{tr.name}</div>
-                  <div className="text-[11px] text-slate-400">{tr.desc}</div>
-                </div>
-                {selectedClipId && <Check className="w-3.5 h-3.5 text-blue-400" />}
-              </button>
-            ))}
           </div>
         </div>
       )}
