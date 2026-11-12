@@ -310,6 +310,8 @@ export const Inspector: React.FC = () => {
           </div>
 
           {/* 3-Way Color Wheels (Lift, Gamma, Gain) */}
+          <details className="cineflow-disclosure">
+            <summary>Advanced color wheels</summary>
           <div className="pt-2 border-t border-[#1c2438]">
             <span className="text-xs font-semibold text-slate-200 block mb-3">
               3-Way Color Wheels
@@ -337,7 +339,6 @@ export const Inspector: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
             </div>
           </details>
         </div>
