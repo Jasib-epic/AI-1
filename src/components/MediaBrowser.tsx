@@ -20,7 +20,7 @@ import { useProject } from '../context/ProjectContext';
 import { EffectType, TransitionType } from '../types/editor';
 import { audioEngine } from '../services/audioEngine';
 
-type BrowserTab = 'media' | 'effects' | 'transitions' | 'audio' | 'titles';
+type BrowserTab = 'media' | 'text' | 'audio' | 'effects';
 
 export const MediaBrowser: React.FC = () => {
   const {
@@ -107,66 +107,28 @@ export const MediaBrowser: React.FC = () => {
 
   return (
     <aside className="w-80 bg-[#0f131d] border-r border-[#1e2638] flex flex-col shrink-0 select-none overflow-hidden">
-      {/* Tab Navigation */}
-      <div className="flex items-center border-b border-[#1c2436] bg-[#0c1018] px-2 pt-1 gap-1">
-        <button
-          onClick={() => setActiveTab('media')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all ${
-            activeTab === 'media'
-              ? 'border-blue-500 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Film className="w-3.5 h-3.5" />
-          <span>Media</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('effects')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all ${
-            activeTab === 'effects'
-              ? 'border-blue-500 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Wand2 className="w-3.5 h-3.5" />
-          <span>Effects</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('transitions')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all ${
-            activeTab === 'transitions'
-              ? 'border-blue-500 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Scissors className="w-3.5 h-3.5" />
-          <span>Transitions</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('audio')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all ${
-            activeTab === 'audio'
-              ? 'border-blue-500 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Music className="w-3.5 h-3.5" />
-          <span>Audio</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('titles')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all ${
-            activeTab === 'titles'
-              ? 'border-blue-500 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Type className="w-3.5 h-3.5" />
-          <span>Titles</span>
-        </button>
-      </div>
+      {/* Compact tool rail */}
+      <nav className="cineflow-tool-rail" aria-label="Editing tools">
+        {([
+          { id: 'media' as const, label: 'Media', icon: <Film className="w-4 h-4" /> },
+          { id: 'text' as const, label: 'Text', icon: <Type className="w-4 h-4" /> },
+          { id: 'audio' as const, label: 'Audio', icon: <Music className="w-4 h-4" /> },
+          { id: 'effects' as const, label: 'Effects', icon: <Wand2 className="w-4 h-4" /> },
+        ]).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setActiveTab(item.id)}
+            aria-pressed={activeTab === item.id}
+            className={activeTab === item.id ? 'active' : ''}
+            title={item.label}
+          >
+            {item.icon}<span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
-      {/* Tab 1: Project Media Pool */}
+      {/* Media library */}
       {activeTab === 'media' && (
         <div className="flex-1 flex flex-col p-3 overflow-hidden">
           {/* Import Button & Search */}
@@ -251,7 +213,7 @@ export const MediaBrowser: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Visual Effects */}
+      {/* Effects and transitions */}
       {activeTab === 'effects' && (
         <div className="flex-1 flex flex-col p-3 overflow-y-auto">
           <p className="text-[11px] text-slate-400 mb-3">
@@ -280,12 +242,30 @@ export const MediaBrowser: React.FC = () => {
                 {selectedClipId && <Plus className="w-4 h-4 text-blue-400 shrink-0" />}
               </button>
             ))}
+
+            <details className="cineflow-disclosure mt-4">
+              <summary>Transitions <span>{transitionsCatalog.length} presets</span></summary>
+              <div className="space-y-2 pt-3">
+                {transitionsCatalog.map((tr) => (
+                  <button
+                    key={tr.type}
+                    type="button"
+                    disabled={!selectedClipId}
+                    onClick={() => selectedClipId && setClipTransition(selectedClipId, { type: tr.type, duration: 0.8 })}
+                    className="w-full text-left p-2.5 rounded-lg border border-[#212b3e] bg-[#151b28] hover:bg-[#1f283c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                  >
+                    <span><span className="block text-xs font-semibold text-slate-200">{tr.name}</span><span className="text-[11px] text-slate-400">{tr.desc}</span></span>
+                    <Plus className="w-4 h-4 text-blue-400 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </details>
           </div>
         </div>
       )}
 
-      {/* Tab 3: Transitions */}
-      {activeTab === 'transitions' && (
+      {/* Transition presets are available inside Effects. */}
+      {false && activeTab === 'effects' && (
         <div className="flex-1 flex flex-col p-3 overflow-y-auto">
           <p className="text-[11px] text-slate-400 mb-3">
             Apply cinematic transitions to the selected clip:
@@ -317,7 +297,7 @@ export const MediaBrowser: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 4: Audio Studio & Voiceover */}
+      {/* Audio tools */}
       {activeTab === 'audio' && (
         <div className="flex-1 flex flex-col p-3 overflow-y-auto space-y-4">
           {/* Microphone Voiceover Recorder */}
@@ -379,8 +359,8 @@ export const MediaBrowser: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 5: Titles & Motion Graphics */}
-      {activeTab === 'titles' && (
+      {/* Text and motion graphics */}
+      {activeTab === 'text' && (
         <div className="flex-1 flex flex-col p-3 overflow-y-auto space-y-3">
           <p className="text-[11px] text-slate-400">
             Add motion graphics and title overlays to the timeline:
