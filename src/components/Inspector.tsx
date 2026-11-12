@@ -119,7 +119,7 @@ export const Inspector: React.FC = () => {
 
       {/* Tab 1: Professional Color Grading Studio */}
       {activeTab === 'color' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
           {/* Preset LUTs */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -338,7 +338,8 @@ export const Inspector: React.FC = () => {
                 );
               })}
             </div>
-          </div>
+            </div>
+          </details>
         </div>
       )}
 
@@ -562,8 +563,9 @@ export const Inspector: React.FC = () => {
           </div>
 
           {/* 3-Band Parametric Equalizer */}
-          <div className="pt-2 border-t border-[#1c2438] space-y-3">
-            <span className="text-xs font-semibold text-slate-200 block">Parametric Equalizer</span>
+          <details className="cineflow-disclosure" open>
+            <summary>Parametric equalizer</summary>
+            <div className="pb-3 space-y-3">
 
             {/* EQ Low */}
             <div>
@@ -618,11 +620,13 @@ export const Inspector: React.FC = () => {
                 className="w-full"
               />
             </div>
-          </div>
+            </div>
+          </details>
 
           {/* Dynamics & Reverb */}
-          <div className="pt-2 border-t border-[#1c2438] space-y-3">
-            <span className="text-xs font-semibold text-slate-200 block">Dynamics & Ambience</span>
+          <details className="cineflow-disclosure">
+            <summary>Dynamics & ambience</summary>
+            <div className="pb-3 space-y-3">
 
             {/* Studio Reverb */}
             <div>
@@ -653,7 +657,8 @@ export const Inspector: React.FC = () => {
                 className="rounded accent-blue-500"
               />
             </div>
-          </div>
+            </div>
+          </details>
         </div>
       )}
 
