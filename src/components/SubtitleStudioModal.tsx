@@ -33,6 +33,7 @@ export const SubtitleStudioModal: React.FC = () => {
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [transcriptionFile, setTranscriptionFile] = useState<File | null>(null);
   const [transcriptionError, setTranscriptionError] = useState<string>('');
+  const [translationError, setTranslationError] = useState<string>('');
 
   if (!isSubtitleModalOpen) return null;
 
@@ -97,26 +98,26 @@ export const SubtitleStudioModal: React.FC = () => {
     }
   };
 
-  // Multilingual Translation using Gemini endpoint
+  // Translation is an optional cloud feature. Manual subtitle editing remains local.
   const handleTranslate = async () => {
-    if (subtitles.length === 0) return;
+    if (subtitles.length === 0) {
+      setTranslationError('Add or import subtitle lines before translating.');
+      return;
+    }
     setIsTranslating(true);
+    setTranslationError('');
     try {
       const res = await fetch('/api/ai/translate-captions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subtitles,
-          targetLanguage: targetLang,
-        }),
+        body: JSON.stringify({ subtitles, targetLanguage: targetLang }),
       });
-
       const data = await res.json();
-      if (data.subtitles && Array.isArray(data.subtitles)) {
-        setSubtitles(data.subtitles);
-      }
+      if (!res.ok) throw new Error(data.error || 'Translation service is unavailable.');
+      if (!Array.isArray(data.subtitles)) throw new Error('The translation service returned invalid subtitle data.');
+      setSubtitles(data.subtitles);
     } catch (err) {
-      console.error('Translation error:', err);
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed.');
     } finally {
       setIsTranslating(false);
     }
@@ -189,7 +190,7 @@ export const SubtitleStudioModal: React.FC = () => {
                 <span>Subtitle & Caption Studio</span>
               </h2>
               <p className="text-[11px] text-slate-400">
-                Word-level timing synchronization, multilingual AI translation, and animated styles.
+                Manual captions work offline. Automatic transcription and translation use optional cloud AI.
               </p>
             </div>
           </div>
@@ -223,7 +224,7 @@ export const SubtitleStudioModal: React.FC = () => {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded shadow-sm transition-colors"
           >
             {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            <span>Auto-Transcribe Speech</span>
+            <span>Auto-Transcribe (cloud AI)</span>
           </button>
 
           {transcriptionError && <p role="alert" className="w-full text-xs text-amber-300">{transcriptionError}</p>}
@@ -256,9 +257,11 @@ export const SubtitleStudioModal: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e273c] hover:bg-[#283550] text-blue-400 text-xs font-semibold rounded border border-blue-500/30 transition-colors"
             >
               {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-              <span>Translate Captions</span>
+              <span>Translate (cloud AI)</span>
             </button>
           </div>
+
+          {translationError && <p role="alert" className="w-full text-xs text-amber-300">{translationError}</p>}
 
           {/* Export SRT */}
           <button
