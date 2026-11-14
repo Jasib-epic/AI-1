@@ -225,12 +225,43 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Restore the most recently saved local project and its imported media.
   useEffect(() => {
     let cancelled = false;
-    loadLocalProject().then((saved) => {
+    loadLocalProject().then(async (saved) => {
       if (cancelled || !saved) return;
       setHasSavedLocalProject(true);
       setProject(saved.project);
-      setMediaAssets(saved.assets);
-      for (const asset of saved.assets) {
+
+      // Repair videos already stored by older project versions. Earlier imports
+      // may predate automatic codec conversion, so check their local blobs again.
+      const repairedAssets = await Promise.all(saved.assets.map(async (asset) => {
+        if (asset.type !== 'video' || !asset.blob) return asset;
+        const storedBlob = asset.blob;
+        const sourceFile = storedBlob instanceof File
+          ? storedBlob
+          : new File([storedBlob], asset.name, { type: storedBlob.type || 'video/mp4' });
+        try {
+          if (await browserCanDecodeVideo(sourceFile)) return asset;
+          const converted = await transcodeVideoForBrowser(sourceFile);
+          if (!(await browserCanDecodeVideo(converted))) {
+            console.warn('Saved video remains unsupported after conversion:', asset.name);
+            return asset;
+          }
+          const convertedUrl = URL.createObjectURL(converted);
+          URL.revokeObjectURL(asset.url);
+          return { ...asset, url: convertedUrl, blob: converted };
+        } catch (error) {
+          console.warn('Could not repair saved video:', asset.name, error);
+          return asset;
+        }
+      }));
+
+      if (cancelled) {
+        repairedAssets.forEach((asset, index) => {
+          if (asset.url !== saved.assets[index].url) URL.revokeObjectURL(asset.url);
+        });
+        return;
+      }
+      setMediaAssets(repairedAssets);
+      for (const asset of repairedAssets) {
         if (asset.type === 'video' || asset.type === 'image') {
           renderEngine.getOrCreateMediaElement(asset.id, asset.url, asset.type);
         }
