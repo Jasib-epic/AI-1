@@ -49,7 +49,22 @@ export class VideoRenderEngine {
     type: 'video' | 'image' | 'audio'
   ): HTMLVideoElement | HTMLImageElement | null {
     if (this.mediaElements.has(assetId)) {
-      return this.mediaElements.get(assetId)!;
+      const existing = this.mediaElements.get(assetId)!;
+      const currentUrl = existing instanceof HTMLVideoElement || existing instanceof HTMLImageElement
+        ? (existing instanceof HTMLVideoElement ? existing.currentSrc || existing.src : existing.src)
+        : '';
+      if (currentUrl !== url) {
+        if (existing instanceof HTMLVideoElement) {
+          existing.pause();
+          existing.removeAttribute('src');
+          existing.load();
+          existing.src = url;
+          existing.load();
+        } else if (existing instanceof HTMLImageElement) {
+          existing.src = url;
+        }
+      }
+      return existing;
     }
 
     if (type === 'video') {
