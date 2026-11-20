@@ -46,7 +46,7 @@ export const Timeline: React.FC = () => {
   const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
   const [dragStartX, setDragStartX] = useState<number>(0);
   const [clipOriginalStart, setClipOriginalStart] = useState<number>(0);
-  const [trimmingClip, setTrimmingClip] = useState<{ id: string; edge: 'left' | 'right'; origStart: number; origDur: number } | null>(null);
+  const [trimmingClip, setTrimmingClip] = useState<{ id: string; edge: 'left' | 'right'; origStart: number; origDur: number; origOffset: number; speed: number } | null>(null);
 
   const TRACK_HEADER_WIDTH = 164; // px
 
@@ -102,9 +102,14 @@ export const Timeline: React.FC = () => {
           const newDur = Math.max(0.5, trimmingClip.origDur + deltaTime);
           updateClip(trimmingClip.id, { duration: newDur });
         } else {
-          const newStart = Math.max(0, trimmingClip.origStart + deltaTime);
-          const newDur = Math.max(0.5, trimmingClip.origDur - deltaTime);
-          updateClip(trimmingClip.id, { start: newStart, duration: newDur });
+          const safeSpeed = Math.max(0.01, trimmingClip.speed);
+          const minStart = Math.max(0, trimmingClip.origStart - trimmingClip.origOffset / safeSpeed);
+          const maxStart = trimmingClip.origStart + trimmingClip.origDur - 0.5;
+          const newStart = Math.min(maxStart, Math.max(minStart, trimmingClip.origStart + deltaTime));
+          const appliedDelta = newStart - trimmingClip.origStart;
+          const newDur = Math.max(0.5, trimmingClip.origDur - appliedDelta);
+          const newOffset = Math.max(0, trimmingClip.origOffset + appliedDelta * safeSpeed);
+          updateClip(trimmingClip.id, { start: newStart, duration: newDur, offset: newOffset });
         }
       } else if (draggingClipId) {
         // Handle clip horizontal dragging
@@ -151,7 +156,7 @@ export const Timeline: React.FC = () => {
       if (rulerRef.current) {
         const clickTime = getTimelineTimeAtClientX(e.clientX);
         seek(clickTime);
-        splitClipAtPlayhead(clip.id);
+        splitClipAtPlayhead(clip.id, clickTime);
       }
       return;
     }
@@ -170,6 +175,8 @@ export const Timeline: React.FC = () => {
       edge,
       origStart: clip.start,
       origDur: clip.duration,
+      origOffset: clip.offset,
+      speed: clip.speed || 1,
     });
     setDragStartX(e.clientX);
   };
