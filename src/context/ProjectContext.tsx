@@ -505,36 +505,55 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         metadataVideo.muted = true;
         metadataVideo.src = url;
         await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, 15000);
           metadataVideo.onloadedmetadata = () => {
+            window.clearTimeout(timeout);
             duration = Number.isFinite(metadataVideo.duration) ? metadataVideo.duration : 5;
             width = metadataVideo.videoWidth || 1920;
             height = metadataVideo.videoHeight || 1080;
             resolve();
           };
-          metadataVideo.onerror = () => resolve();
+          metadataVideo.onerror = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
         });
+        metadataVideo.removeAttribute('src');
+        metadataVideo.load();
         renderEngine.getOrCreateMediaElement(assetId, url, 'video');
       } else if (isAudio) {
         const metadataAudio = document.createElement('audio');
         metadataAudio.preload = 'metadata';
         metadataAudio.src = url;
         await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, 15000);
           metadataAudio.onloadedmetadata = () => {
+            window.clearTimeout(timeout);
             duration = Number.isFinite(metadataAudio.duration) ? metadataAudio.duration : 10;
             resolve();
           };
-          metadataAudio.onerror = () => resolve();
+          metadataAudio.onerror = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
         });
+        metadataAudio.removeAttribute('src');
+        metadataAudio.load();
       } else if (isImage) {
         const image = new Image();
         image.src = url;
         await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, 15000);
           image.onload = () => {
+            window.clearTimeout(timeout);
             width = image.naturalWidth || 1920;
             height = image.naturalHeight || 1080;
             resolve();
           };
-          image.onerror = () => resolve();
+          image.onerror = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
         });
         renderEngine.getOrCreateMediaElement(assetId, url, 'image');
       }
