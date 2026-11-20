@@ -23,6 +23,8 @@ export const PreviewMonitor: React.FC = () => {
     mediaAssets,
     currentTime,
     isPlaying,
+    isLooping,
+    setIsLooping,
     togglePlay,
     seek,
     stepFrame,
@@ -42,7 +44,6 @@ export const PreviewMonitor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scopeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
-  const [isLooping, setIsLooping] = useState(true);
   const [mediaRevision, setMediaRevision] = useState(0);
   const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
