@@ -4,7 +4,7 @@ let ffmpegInstance: FFmpeg | null = null;
 let loading: Promise<FFmpeg> | null = null;
 
 const CORE_VERSION = '0.12.10';
-const CORE_PATH = `@ffmpeg/core@${CORE_VERSION}/dist/umd';
+const CORE_PATH = `@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 /**
  * Load the single-threaded FFmpeg core from a public CDN.
