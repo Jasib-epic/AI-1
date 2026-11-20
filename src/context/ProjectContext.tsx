@@ -232,27 +232,51 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Repair videos already stored by older project versions. Earlier imports
       // may predate automatic codec conversion, so check their local blobs again.
-      const repairedAssets = await Promise.all(saved.assets.map(async (asset) => {
-        if (asset.type !== 'video' || !asset.blob) return asset;
+      const repairedAssets: MediaAsset[] = [];
+      let converterUnavailable = false;
+      for (const asset of saved.assets) {
+        if (asset.type !== 'video' || !asset.blob) {
+          repairedAssets.push(asset);
+          continue;
+        }
+
         const storedBlob = asset.blob;
         const sourceFile = storedBlob instanceof File
           ? storedBlob
           : new File([storedBlob], asset.name, { type: storedBlob.type || 'video/mp4' });
+
         try {
-          if (await browserCanDecodeVideo(sourceFile)) return asset;
+          if (await browserCanDecodeVideo(sourceFile)) {
+            repairedAssets.push(asset);
+            continue;
+          }
+
+          // If the FFmpeg core cannot load, do not retry the same broken
+          // converter for every remaining saved video during this restore.
+          if (converterUnavailable) {
+            repairedAssets.push(asset);
+            continue;
+          }
+
           const converted = await transcodeVideoForBrowser(sourceFile);
           if (!(await browserCanDecodeVideo(converted))) {
             console.warn('Saved video remains unsupported after conversion:', asset.name);
-            return asset;
+            repairedAssets.push(asset);
+            continue;
           }
+
           const convertedUrl = URL.createObjectURL(converted);
           URL.revokeObjectURL(asset.url);
-          return { ...asset, url: convertedUrl, blob: converted };
+          repairedAssets.push({ ...asset, url: convertedUrl, blob: converted });
         } catch (error) {
-          console.warn('Could not repair saved video:', asset.name, error);
-          return asset;
+          converterUnavailable = true;
+          console.warn(
+            'Saved-video conversion is unavailable. Original saved files are being preserved; automatic repair was paused.',
+            error
+          );
+          repairedAssets.push(asset);
         }
-      }));
+      }
 
       if (cancelled) {
         repairedAssets.forEach((asset, index) => {
