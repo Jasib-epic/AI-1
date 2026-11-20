@@ -94,6 +94,7 @@ interface ProjectContextType {
   project: VideoProject;
   currentTime: number;
   isPlaying: boolean;
+  isLooping: boolean;
   selectedClipId: string | null;
   selectedTrackId: string | null;
   activeTool: 'select' | 'razor' | 'trim';
@@ -126,6 +127,7 @@ interface ProjectContextType {
   setIsExportModalOpen: (open: boolean) => void;
   setIsSubtitleModalOpen: (open: boolean) => void;
 
+  setIsLooping: (enabled: boolean) => void;
   seek: (time: number) => void;
   togglePlay: () => void;
   stepFrame: (frames: number) => void;
@@ -135,7 +137,7 @@ interface ProjectContextType {
   addClipToTrack: (assetId: string, trackId: string, startTime?: number) => void;
   addTitleClip: (trackId?: string) => void;
   updateClip: (clipId: string, updates: Partial<TimelineClip>) => void;
-  splitClipAtPlayhead: (clipId?: string) => void;
+  splitClipAtPlayhead: (clipId?: string, atTime?: number) => void;
   duplicateClip: (clipId: string) => void;
   deleteClip: (clipId: string) => void;
 
@@ -193,6 +195,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isLooping, setIsLooping] = useState<boolean>(true);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>('track-v1');
   const [activeTool, setActiveTool] = useState<'select' | 'razor' | 'trim'>('select');
@@ -385,6 +388,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCurrentTime((prev) => {
           const next = prev + delta;
           if (next >= project.duration) {
+            if (isLooping && project.duration > 0) return next % project.duration;
             setIsPlaying(false);
             return 0;
           }
@@ -396,7 +400,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, project.duration]);
+  }, [isPlaying, isLooping, project.duration]);
 
   // Keep audio clips synchronized with the timeline playhead and track controls.
   useEffect(() => {
@@ -658,20 +662,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
   }, []);
 
-  const splitClipAtPlayhead = useCallback((targetClipId?: string) => {
+  const splitClipAtPlayhead = useCallback((targetClipId?: string, atTime?: number) => {
+    const splitTime = atTime ?? currentTime;
     const clipIdToSplit = targetClipId || selectedClipId;
     if (!clipIdToSplit) return;
 
     const clip = project.clips.find((c) => c.id === clipIdToSplit);
     if (!clip) return;
 
-    if (currentTime <= clip.start || currentTime >= clip.start + clip.duration) {
+    if (splitTime <= clip.start || splitTime >= clip.start + clip.duration) {
       return; // playhead outside clip
     }
 
     pushHistory(project);
 
-    const splitPoint = currentTime - clip.start;
+    const splitPoint = splitTime - clip.start;
     const durationFirstPart = splitPoint;
     const durationSecondPart = clip.duration - splitPoint;
 
@@ -683,7 +688,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const secondClip: TimelineClip = {
       ...clip,
       id: `clip-${Date.now()}`,
-      start: currentTime,
+      start: splitTime,
       duration: durationSecondPart,
       offset: clip.offset + splitPoint * clip.speed,
     };
@@ -998,6 +1003,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         project,
         currentTime,
         isPlaying,
+        isLooping,
         selectedClipId,
         selectedTrackId,
         activeTool,
@@ -1029,6 +1035,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsExportModalOpen,
         setIsSubtitleModalOpen,
 
+        setIsLooping,
         seek,
         togglePlay,
         stepFrame,
