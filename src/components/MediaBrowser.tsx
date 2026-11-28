@@ -67,7 +67,7 @@ export const MediaBrowser: React.FC = () => {
       if (result) {
         const newAsset = {
           id: `vo-${Date.now()}`,
-          name: `Voiceover ${new Date().toLocaleTimeString()}.wav`,
+          name: `Voiceover ${new Date().toLocaleTimeString()}.${result.blob.type.includes('ogg') ? 'ogg' : result.blob.type.includes('mp4') ? 'm4a' : 'webm'}`,
           type: 'audio' as const,
           url: result.url,
           duration: result.duration,
