@@ -23,7 +23,8 @@
     "react-dom": "^19.0.1",
     "vite": "^8.3.0",
     "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/core": "^0.12.10"
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/util": "^0.12.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
