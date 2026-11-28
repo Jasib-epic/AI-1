@@ -18,7 +18,7 @@ class AudioStudioEngine {
   private analyser: AnalyserNode | null = null;
 
   // Active audio elements pool mapped by clip ID
-  private audioElements: Map<string, { element: HTMLAudioElement; source: MediaElementAudioSourceNode; gain: GainNode }> = new Map();
+  private audioElements: Map<string, { element: HTMLAudioElement; source: MediaElementAudioSourceNode | null; gain: GainNode; direct: boolean }> = new Map();
 
   // Voiceover recording state
   private mediaRecorder: MediaRecorder | null = null;
@@ -169,25 +169,22 @@ class AudioStudioEngine {
       return this.audioElements.get(id)!.gain;
     }
 
+    const gain = ctx.createGain();
+    gain.gain.value = 1.0;
     try {
       const source = ctx.createMediaElementSource(element as any);
-      const gain = ctx.createGain();
-      gain.gain.value = 1.0;
-
       source.connect(gain);
-      if (this.eqLow) {
-        gain.connect(this.eqLow);
-      } else {
-        gain.connect(ctx.destination);
-      }
-
-      this.audioElements.set(id, { element: element as any, source, gain });
-      return gain;
-    } catch (e) {
-      // Element might already be connected or CORS restricted
-      const gain = ctx.createGain();
-      return gain;
+      if (this.eqLow) gain.connect(this.eqLow);
+      else gain.connect(ctx.destination);
+      this.audioElements.set(id, { element: element as any, source, gain, direct: false });
+    } catch (error) {
+      // Never silently drop audio if Web Audio cannot take ownership of an element.
+      // Fall back to native HTMLMediaElement output and apply clip volume directly.
+      console.warn('CineFlow audio routing fallback:', error);
+      try { gain.disconnect(); } catch { /* no connection to remove */ }
+      this.audioElements.set(id, { element: element as any, source: null, gain, direct: true });
     }
+    return gain;
   }
 
   /** Schedule imported audio clips against the editor timeline during preview playback. */
@@ -229,23 +226,23 @@ class AudioStudioEngine {
         if (!entry) continue;
       }
 
-      const { element, gain } = entry;
+      const { element, gain, direct } = entry;
 
       activeClipIds.add(clip.id);
+      element.muted = false;
       const expectedTime = Math.max(0, (timelineTime - clip.start) * clip.speed + clip.offset);
       element.playbackRate = Math.max(0.25, Math.min(4, clip.speed || 1));
-      gain.gain.setTargetAtTime(
-        Math.max(0, clip.volume) * Math.max(0, track.volume),
-        this.ctx?.currentTime ?? 0,
-        0.03
-      );
+      const clipGain = Math.max(0, Math.min(1, clip.volume * track.volume));
+      gain.gain.setTargetAtTime(clipGain, this.ctx?.currentTime ?? 0, 0.03);
+      if (direct) element.volume = clipGain;
+      if (this.ctx?.state === 'suspended') void this.ctx.resume();
 
       if (element.paused || Math.abs(element.currentTime - expectedTime) > 0.4) {
         if (Math.abs(element.currentTime - expectedTime) > 0.4) {
           try { element.currentTime = expectedTime; } catch { /* wait for metadata */ }
         }
-        void element.play().catch(() => {
-          // Playback may be blocked until the next user gesture.
+        void element.play().catch((error) => {
+          console.warn('CineFlow timeline audio playback was blocked:', clip.name, error);
         });
       }
     }
