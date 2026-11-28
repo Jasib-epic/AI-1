@@ -302,7 +302,8 @@ class AudioStudioEngine {
         const tracks = this.mediaRecorder?.stream.getTracks();
         tracks?.forEach((t) => t.stop());
 
-        const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+        const recordedType = this.recordedChunks[0]?.type || this.mediaRecorder?.mimeType || 'audio/webm';
+        const blob = new Blob(this.recordedChunks, { type: recordedType });
         const url = URL.createObjectURL(blob);
 
         // Calculate duration from audio buffer
