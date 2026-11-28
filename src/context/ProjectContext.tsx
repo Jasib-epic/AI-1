@@ -599,7 +599,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     pushHistory(project);
 
     const start = startTime !== undefined ? startTime : currentTime;
-    const clipDuration = Math.min(asset.duration, 8);
+    // Audio and voiceover clips should retain their full recorded duration.
+    const clipDuration = asset.type === 'audio' ? asset.duration : Math.min(asset.duration, 8);
 
     const newClip: TimelineClip = {
       id: `clip-${Date.now()}`,
