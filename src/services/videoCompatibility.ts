@@ -1,16 +1,19 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { toBlobURL } from '@ffmpeg/util';
 
 let ffmpegInstance: FFmpeg | null = null;
 let loading: Promise<FFmpeg> | null = null;
+// Keep the Blob URLs alive for as long as FFmpeg may need its core/WASM.
+let coreBlobURLs: string[] = [];
 
 const CORE_VERSION = '0.12.10';
 const CORE_PATH = `@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 /**
- * Load the single-threaded FFmpeg core from a public CDN.
- * Use direct URLs rather than Blob module URLs: some browsers and hosting
- * security policies reject importing the core script from a Blob URL.
- * If the primary CDN is unavailable, retry against jsDelivr.
+ * Load FFmpeg's core as same-origin Blob URLs. Browsers often block a Web
+ * Worker from importing the core directly from a third-party CDN. HEAD
+ * requests are also unreliable on CDNs, so fetch and validate the actual
+ * files instead.
  */
 async function loadCore(ffmpeg: FFmpeg): Promise<void> {
   const bases = [
@@ -20,30 +23,23 @@ async function loadCore(ffmpeg: FFmpeg): Promise<void> {
   const failures: string[] = [];
 
   for (const base of bases) {
+    let coreURL: string | null = null;
+    let wasmURL: string | null = null;
     try {
-      const coreURL = `${base}/ffmpeg-core.js`;
-      const wasmURL = `${base}/ffmpeg-core.wasm`;
-
-      // Verify both assets are reachable before starting the worker. This
-      // produces a useful CDN/network error instead of FFmpeg's vague
-      // "failed to import ffmpeg-core.js" message.
-      const [coreResponse, wasmResponse] = await Promise.all([
-        fetch(coreURL, { method: 'HEAD', cache: 'force-cache' }),
-        fetch(wasmURL, { method: 'HEAD', cache: 'force-cache' }),
-      ]);
-      if (!coreResponse.ok || !wasmResponse.ok) {
-        throw new Error(`FFmpeg core assets unavailable (JS ${coreResponse.status}, WASM ${wasmResponse.status}).`);
-      }
-
+      coreURL = await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript');
+      wasmURL = await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm');
       await ffmpeg.load({ coreURL, wasmURL });
+      coreBlobURLs = [coreURL, wasmURL];
       return;
     } catch (error) {
+      if (coreURL) URL.revokeObjectURL(coreURL);
+      if (wasmURL) URL.revokeObjectURL(wasmURL);
       failures.push(error instanceof Error ? error.message : String(error));
     }
   }
 
   throw new Error(
-    `Could not load FFmpeg from either CDN. Check network access, browser worker permissions, and Content-Security-Policy. ${failures.join(' | ')}`
+    `Could not load the local video converter from either CDN. Check your internet connection or browser network restrictions. Details: ${failures.join(' | ')}`
   );
 }
 
@@ -63,10 +59,7 @@ async function getFFmpeg(): Promise<FFmpeg> {
   return loading;
 }
 
-/**
- * Transcodes unsupported source codecs locally in the browser.
- * Original footage is not uploaded to CineFlow's server.
- */
+/** Transcodes unsupported source codecs locally in the browser. */
 export async function transcodeVideoForBrowser(file: File): Promise<File> {
   const ffmpeg = await getFFmpeg();
   const inputName = `source-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -93,7 +86,8 @@ export async function transcodeVideoForBrowser(file: File): Promise<File> {
     if (!(data instanceof Uint8Array) || data.length === 0) {
       throw new Error('The converted video file is empty.');
     }
-    return new File([data], file.name.replace(/\\.[^.]+$/, '') + '-converted.mp4', {
+    const baseName = file.name.replace(/\\.[^.]+$/, '');
+    return new File([data], `${baseName}-converted.mp4`, {
       type: 'video/mp4',
       lastModified: Date.now(),
     });
